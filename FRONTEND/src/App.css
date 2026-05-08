@@ -21,3 +21,28 @@
   scrollbar-width: thin;
   scrollbar-color: #ca8a04 transparent;
 }
+/* Scroll elegante dorado */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    to bottom,
+    rgba(234, 179, 8, 0.7),
+    rgba(161, 98, 7, 0.8)
+  );
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    to bottom,
+    rgba(250, 204, 21, 0.9),
+    rgba(202, 138, 4, 1)
+  );
+}

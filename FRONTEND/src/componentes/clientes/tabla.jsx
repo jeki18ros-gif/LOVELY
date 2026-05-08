@@ -3,13 +3,6 @@ import { Pencil, Trash2, Eye, AlertTriangle } from 'lucide-react';
 import FormularioVer from "./formularios/formularioVer";
 import FormularioEditar from "./formularios/formularioEditar";
 
-// Datos iniciales
-const initialClientes = [
-  { id: 1, nombre: 'Carlos Pérez', telefono: '987654321', correo: 'carlos@mail.com', frecuencia: 'Frecuente', visitas: 12, ultimaVisita: '2026-04-20', seguimiento: 'Cliente VIP' },
-  { id: 2, nombre: 'María López', telefono: '912345678', correo: 'maria@mail.com', frecuencia: 'Regular', visitas: 6, ultimaVisita: '2026-04-15', seguimiento: 'Prefiere tardes' },
-  { id: 3, nombre: 'Luis García', telefono: '998877665', correo: 'luis@mail.com', frecuencia: 'Nuevo', visitas: 1, ultimaVisita: '2026-04-10', seguimiento: 'Primera visita' },
-];
-
 const getFrecuenciaColor = (frecuencia) => {
   switch (frecuencia) {
     case 'Frecuente': return 'bg-green-500/20 text-green-600 dark:bg-green-900/30 dark:text-green-400';
@@ -19,9 +12,13 @@ const getFrecuenciaColor = (frecuencia) => {
   }
 };
 
-const ClienteTable = ({ filters }) => {
+const ClienteTable = ({ 
+  filters, 
+  listaClientes, 
+  setListaClientes,
+  actualizarCliente 
+}) => {
   // ESTADOS
-  const [listaClientes, setListaClientes] = useState(initialClientes);
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
   const [modalType, setModalType] = useState(null); // 'ver', 'editar', 'borrar'
 
@@ -35,27 +32,28 @@ const ClienteTable = ({ filters }) => {
     setClienteSeleccionado(cliente);
     setModalType(tipo);
   };
+const eliminarCliente = async (id) => {
+  const { error } = await supabase
+    .from('clientes')
+    .delete()
+    .eq('id', id);
 
-  const eliminarCliente = (id) => {
-    const nuevaLista = listaClientes.filter(c => c.id !== id);
-    setListaClientes(nuevaLista);
-    cerrarModal();
-  };
+  if (error) {
+    console.error('Error eliminando:', error);
+    alert('Error al eliminar cliente');
+    return;
+  }
 
-  const actualizarCliente = (datosEditados) => {
-    const nuevaLista = listaClientes.map(c => 
-      c.id === clienteSeleccionado.id ? { ...c, ...datosEditados } : c
-    );
-    setListaClientes(nuevaLista);
-    cerrarModal();
-  };
+  setListaClientes(prev => prev.filter(c => c.id !== id));
+  cerrarModal();
+};
 // --- LÓGICA DE FILTRADO ---
   const clientesFiltrados = useMemo(() => {
     return listaClientes.filter(cliente => {
       // 1. Filtro de Búsqueda (Nombre o Teléfono)
       const matchesSearch = 
         cliente.nombre.toLowerCase().includes(filters.search.toLowerCase()) ||
-        cliente.telefono.includes(filters.search);
+        (cliente.telefono || '').includes(filters.search);
 
       // 2. Filtro de Frecuencia
       const matchesFrecuencia = filters.frecuencia === '' || cliente.frecuencia === filters.frecuencia;
@@ -124,7 +122,7 @@ const ClienteTable = ({ filters }) => {
             {clientesFiltrados.length === 0 && (
               <tr>
                 <td colSpan="5" className="px-6 py-10 text-center text-gray-500 italic">
-                  No se encontraron clientes con esos filtros.
+                  No se encontraron clientes.
                 </td>
               </tr>
             )}
@@ -140,13 +138,15 @@ const ClienteTable = ({ filters }) => {
         cliente={clienteSeleccionado} 
       />
 
-      <FormularioEditar 
-        isOpen={modalType === 'editar'} 
-        onClose={cerrarModal} 
-        cliente={clienteSeleccionado}
-        onSubmit={actualizarCliente}
-      />
-
+     <FormularioEditar 
+  isOpen={modalType === 'editar'} 
+  onClose={cerrarModal} 
+  cliente={clienteSeleccionado}
+  onSubmit={(form) => {
+    actualizarCliente(clienteSeleccionado.id, form);
+    cerrarModal();
+  }}
+/>
       {/* MODAL DE CONFIRMACIÓN DE BORRADO */}
       {modalType === 'borrar' && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">

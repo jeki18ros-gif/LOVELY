@@ -33,8 +33,8 @@ const FilterBar = ({ filters, setFilters }) => {
         </span>
         <input 
           type="text"
-  value={filters.search}
-  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+  value={filters.nombre}
+  onChange={(e) => setFilters({ ...filters, nombre: e.target.value })}
           placeholder="Nombre del servicio..." 
           className="w-full bg-white dark:bg-[#0f0f0f] border border-gray-200 dark:border-zinc-700 rounded-lg py-2.5 pl-10 pr-4 text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 outline-none transition"
         />
@@ -47,17 +47,14 @@ const FilterBar = ({ filters, setFilters }) => {
           <Clock size={18} />
         </span>
         <select 
-        value={filters.duration}
-  onChange={(e) => setFilters({ ...filters, duration: e.target.value })}
+        value={filters.duracion}
+  onChange={(e) => setFilters({ ...filters, duracion: e.target.value })}
   className={selectClasses}>
           <option value="">Todas</option>
-          <option value="10">10 min</option>
-          <option value="20">20 min</option>
-          <option value="30">30 min</option>
-          <option value="40">40 min</option>
-          <option value="1h">1h</option>
-          <option value="2h">2h</option>
-          <option value="+2h">+2h</option>
+<option value="0-30">0 - 30 min</option>
+<option value="31-60">31 - 60 min</option>
+<option value="61-120">1h - 2h</option>
+<option value="120+">Más de 2h</option>
         </select>
         <span className="absolute right-3 top-[38px] text-gray-500 pointer-events-none">
           <ChevronDown size={16} />
@@ -70,8 +67,8 @@ const FilterBar = ({ filters, setFilters }) => {
         <span className="absolute left-3 top-[38px] text-gray-400 dark:text-gray-500 pointer-events-none">
           <DollarSign size={18} />
         </span>
-        <select value={filters.price}
-  onChange={(e) => setFilters({ ...filters, price: e.target.value })}
+        <select value={filters.precio}
+  onChange={(e) => setFilters({ ...filters, precio: e.target.value })}
 className={selectClasses}>
           <option value="">Todos</option>
           <option value="0-20">Hasta S/ 20</option>
@@ -91,8 +88,8 @@ className={selectClasses}>
           <ToggleLeft size={18} />
         </span>
         <select 
-        value={filters.status}
-  onChange={(e) => setFilters({ ...filters, status: e.target.value })}className={selectClasses}>
+        value={filters.estado}
+  onChange={(e) => setFilters({ ...filters, estado: e.target.value })}className={selectClasses}>
           <option value="">Todos</option>
           <option value="true">Activo</option>
           <option value="false">Inactivo</option>
@@ -105,10 +102,10 @@ className={selectClasses}>
       {/*LIMPIAR */}
       <button 
       onClick={() => setFilters({
-    search: '',
-    duration: '',
-    price: '',
-    status: ''
+    nombre: '',
+    duracion: '',
+    precio: '',
+    estado: ''
   })}className="flex items-center gap-2 px-4 py-2.5 
                          border border-amber-500/30
                          rounded-lg text-sm font-medium

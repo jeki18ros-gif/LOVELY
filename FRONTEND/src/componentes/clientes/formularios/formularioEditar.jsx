@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { X, User, Phone, Mail, Save, RefreshCw } from "lucide-react";
+import { X, User, Phone, Mail, Save, RefreshCw, MessageSquare } from "lucide-react";
 
 export default function FormularioEditar({ isOpen, onClose, onSubmit, cliente }) {
   const [form, setForm] = useState({
     nombre: "",
     numero: "",
     correo: "",
+    seguimiento: "" // Nuevo campo
   });
 
-  // Cargar los datos del cliente cuando el modal se abre o el cliente cambia
   useEffect(() => {
     if (cliente && isOpen) {
       setForm({
         nombre: cliente.nombre || "",
-        numero: cliente.numero || "",
-        correo: cliente.correo || "",
+        numero: cliente.telefono === '—' ? "" : cliente.telefono,
+        correo: cliente.correo === '—' ? "" : cliente.correo,
+        seguimiento: "" 
       });
     }
   }, [cliente, isOpen]);
@@ -26,107 +27,72 @@ export default function FormularioEditar({ isOpen, onClose, onSubmit, cliente })
     setForm({ ...form, [name]: value });
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(form);
-  };
-
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md rounded-2xl p-6 bg-white dark:bg-[#0f0f0f] border border-amber-500/30 shadow-2xl animate-in fade-in zoom-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="relative w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden rounded-3xl border border-yellow-500/20 bg-white dark:bg-[#0b0b0b] shadow-2xl">
         
-        {/* Cabecera */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-amber-500/10 rounded-lg">
-              <RefreshCw className="text-amber-500" size={20} />
+        <div className="h-2 w-full shrink-0 bg-gradient-to-r from-yellow-700 via-yellow-400 to-yellow-700" />
+
+        <div className="flex items-center justify-between border-b border-yellow-500/10 px-6 py-5 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-yellow-500/10 rounded-xl border border-yellow-500/20">
+              <RefreshCw className="text-yellow-600 dark:text-yellow-500" size={20} />
             </div>
-            <h2 className="text-xl font-bold dark:text-white">Editar Cliente</h2>
+            <h2 className="text-xl font-bold text-black dark:text-white">Editar Cliente</h2>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-full transition"
-          >
-            <X className="text-gray-500" size={20} />
+          <button onClick={onClose} className="p-2 rounded-xl hover:bg-yellow-500/10 transition">
+            <X className="text-yellow-600 dark:text-yellow-400" />
           </button>
         </div>
 
-        {/* Formulario */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          
-          {/* Campo Nombre */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-500 uppercase ml-1">
-              Nombre Completo
+        <form 
+          onSubmit={(e) => { e.preventDefault(); onSubmit(form); }} 
+          className="flex-1 overflow-y-auto p-6 space-y-5 scrollbar-thin scrollbar-thumb-yellow-500/40"
+        >
+          {/* Nombre */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <User size={16} className="text-yellow-500" /> Nombre Completo
             </label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input
-                required
-                type="text"
-                name="nombre"
-                value={form.nombre}
-                onChange={handleChange}
-                placeholder="Nombre del cliente"
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-amber-500/40 outline-none transition"
-              />
-            </div>
+            <input
+              required name="nombre" value={form.nombre} onChange={handleChange}
+              className="w-full rounded-2xl border border-yellow-500/20 bg-white dark:bg-white/[0.03] p-4 text-black dark:text-white outline-none focus:border-yellow-500"
+            />
           </div>
 
-          {/* Campo Número */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-500 uppercase ml-1">
-              Número de Teléfono
+          {/* Teléfono */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <Phone size={16} className="text-yellow-500" /> Teléfono
             </label>
-            <div className="relative">
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input
-                type="tel"
-                name="numero"
-                value={form.numero}
-                onChange={handleChange}
-                placeholder="Número de contacto"
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-amber-500/40 outline-none transition"
-              />
-            </div>
+            <input
+              name="numero" value={form.numero} onChange={handleChange}
+              className="w-full rounded-2xl border border-yellow-500/20 bg-white dark:bg-white/[0.03] p-4 text-black dark:text-white outline-none focus:border-yellow-500"
+            />
           </div>
 
-          {/* Campo Correo */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-500 uppercase ml-1">
-              Correo Electrónico
+          {/* Seguimiento / Notas */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <MessageSquare size={16} className="text-yellow-500" /> Notas de Seguimiento
             </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input
-                type="email"
-                name="correo"
-                value={form.correo}
-                onChange={handleChange}
-                placeholder="correo@ejemplo.com"
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-amber-500/40 outline-none transition"
-              />
-            </div>
+            <textarea
+              name="seguimiento" value={form.seguimiento} onChange={handleChange} rows={3}
+              placeholder="Escribe aquí el estado actual o notas del cliente..."
+              className="w-full rounded-2xl border border-yellow-500/20 bg-white dark:bg-white/[0.03] p-4 text-black dark:text-white outline-none focus:border-yellow-500 resize-none"
+            />
           </div>
 
-          {/* Botones de Acción */}
-          <div className="flex gap-3 mt-8">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-zinc-800 font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-zinc-700 transition"
-            >
+          <div className="flex flex-col sm:flex-row gap-3 pt-4 shrink-0">
+            <button type="button" onClick={onClose} className="flex-1 py-4 rounded-2xl bg-gray-100 dark:bg-white/5 font-bold text-gray-600 dark:text-gray-300 transition">
               Descartar
             </button>
-            <button
-              type="submit"
-              className="flex-1 py-3 rounded-xl bg-amber-500 text-black font-semibold hover:bg-amber-400 shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 transition"
-            >
-              <Save size={18} />
-              Guardar Cambios
+            <button type="submit" className="flex-1 py-4 rounded-2xl bg-gradient-to-r from-yellow-700 via-yellow-500 to-yellow-700 font-bold text-black flex items-center justify-center gap-2 transition hover:scale-[1.02]">
+              <Save size={18} /> Guardar Cambios
             </button>
           </div>
         </form>
+        <div className="h-1 w-full shrink-0 bg-gradient-to-r from-yellow-700 via-yellow-400 to-yellow-700" />
       </div>
     </div>
   );

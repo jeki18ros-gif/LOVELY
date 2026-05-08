@@ -1,68 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Pencil, Trash2, Eye, ChevronLeft, ChevronRight, X, AlertTriangle } from 'lucide-react';
 import FormularioVer from './formularios/FormularioVer';
 import FormularioEditar from './formularios/FormularioEditar';
+import useServicesTable from './hook/useServicesTable';
+const ServiceTable = ({
+  filters,
+  categoriaSeleccionada,
+  refresh,
+  categorias
+}) => {
 
-const initialServices = [
-  { id: 1, name: 'Corte de cabello', price: 'S/ 20.00', duration: '30 min', category: 'Corte', categoryColor: 'bg-yellow-500/20 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400', status: true },
-  { id: 2, name: 'Tinte completo', price: 'S/ 50.00', duration: '90 min', category: 'Color', categoryColor: 'bg-green-500/20 text-green-600 dark:bg-green-900/30 dark:text-green-400', status: true },
-  { id: 3, name: 'Mechas', price: 'S/ 40.00', duration: '90 min', category: 'Color', categoryColor: 'bg-green-500/20 text-green-600 dark:bg-green-900/30 dark:text-green-400', status: false },
-  { id: 4, name: 'Cepillado', price: 'S/ 15.00', duration: '30 min', category: 'Corte', categoryColor: 'bg-yellow-500/20 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400', status: true },
-];
-
-const ServiceTable = ({ filters }) => {
-  const [services, setServices] = useState(initialServices);
-  const [selectedService, setSelectedService] = useState(null);
-  const [modalType, setModalType] = useState(null); // 'view', 'edit', 'delete'
-
-  // --- Lógica de Filtros ---
-  const filteredServices = services.filter(service => {
-    if (filters.search && !service.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
-    
-    if (filters.duration) {
-      const serviceMin = parseInt(service.duration);
-      if (filters.duration === '1h' && serviceMin < 60) return false;
-      if (filters.duration === '2h' && serviceMin < 120) return false;
-      if (!isNaN(parseInt(filters.duration)) && serviceMin !== parseInt(filters.duration)) return false;
-    }
-
-    if (filters.price) {
-      const price = parseFloat(service.price.replace(/[^\d.]/g, ''));
-      if (filters.price === '0-20' && price > 20) return false;
-      if (filters.price === '20-50' && (price < 20 || price > 50)) return false;
-      if (filters.price === '100+' && price < 100) return false;
-    }
-
-   if (filters.status !== '' && service.status.toString() !== filters.status) {
-  return false;
-}
-    return true;
-  });
-
-  // --- Paginación ---
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
-  const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
-  const currentItems = filteredServices.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
-  // --- Handlers de Acciones ---
-  const closeModal = () => { setSelectedService(null); setModalType(null); };
-
-  const handleToggleStatus = (id) => {
-    setServices(services.map(s => s.id === id ? { ...s, status: !s.status } : s));
-  };
-
-  const handleDelete = (id) => {
-    setServices(services.filter(s => s.id !== id));
-    closeModal();
-    if (currentItems.length === 1 && currentPage > 1) setCurrentPage(currentPage - 1);
-  };
-
-  const handleUpdate = (updatedData) => {
-    setServices(services.map(s => s.id === selectedService.id ? { ...s, ...updatedData } : s));
-    closeModal();
-  };
-
+  const {
+    selectedService,
+    modalType,
+    currentPage,
+    setSelectedService,
+    setModalType,
+    setCurrentPage,
+    filteredServices,
+    currentItems,
+    totalPages,
+    closeModal,
+    handleToggleStatus,
+    handleDelete,
+    handleUpdate
+} = useServicesTable({
+  filters,
+  categoriaSeleccionada,
+  refresh
+});
   return (
     <div className="w-full text-gray-800 dark:text-gray-300 font-sans p-4">
       <div className="w-full overflow-hidden rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-[#111111] shadow-xl">
@@ -80,12 +46,12 @@ const ServiceTable = ({ filters }) => {
           <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
             {currentItems.map((service) => (
               <tr key={service.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.03] transition">
-                <td className="px-6 py-4 text-sm font-medium">{service.name}</td>
-                <td className="px-6 py-4 text-sm text-center font-semibold text-amber-600 dark:text-amber-500">{service.price}</td>
-                <td className="px-6 py-4 text-sm text-center">{service.duration}</td>
+                <td className="px-6 py-4 text-sm font-medium">{service.nombre}</td>
+                <td className="px-6 py-4 text-sm text-center font-semibold text-amber-600 dark:text-amber-500">s/ {service.precio}</td>
+                <td className="px-6 py-4 text-sm text-center">{service.duracion} min</td>
                 <td className="px-6 py-4 text-center">
                   <span className={`px-3 py-1 rounded text-xs font-medium ${service.categoryColor}`}>
-                    {service.category}
+                    {service.categoria}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-center">
@@ -93,13 +59,13 @@ const ServiceTable = ({ filters }) => {
                     <button 
   onClick={() => handleToggleStatus(service.id)}
   className={`w-10 h-5 flex items-center rounded-full p-1 transition cursor-pointer
-    ${service.status ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+    ${service.estado ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}
 >
   <div className={`bg-white w-3 h-3 rounded-full shadow transform transition
-    ${service.status ? 'translate-x-5' : 'translate-x-0'}`} />
+    ${service.estado ? 'translate-x-5' : 'translate-x-0'}`} />
 </button>
 <span className="text-xs text-gray-500 dark:text-gray-400 w-12 text-left">
-  {service.status ? 'Activo' : 'Inactivo'}
+  {service.estado ? 'Activo' : 'Inactivo'}
 </span>
                   </div>
                 </td>
@@ -142,11 +108,12 @@ const ServiceTable = ({ filters }) => {
       />
 
       <FormularioEditar 
-        isOpen={modalType === 'edit'} 
-        onClose={closeModal} 
-        service={selectedService} 
-        onSubmit={handleUpdate}
-      />
+  isOpen={modalType === 'edit'} 
+  onClose={closeModal} 
+  service={selectedService} 
+  onSubmit={handleUpdate}
+  categorias={categorias}
+/>
 
       {/* Modal de Eliminación (Confirmación Simple) */}
       {modalType === 'delete' && (
@@ -157,7 +124,7 @@ const ServiceTable = ({ filters }) => {
                 <AlertTriangle size={32} />
               </div>
               <h3 className="text-xl font-bold mb-2">¿Eliminar servicio?</h3>
-              <p className="text-gray-500 text-sm mb-6">Esta acción no se puede deshacer. El servicio <span className="text-gray-800 dark:text-white font-bold italic">"{selectedService.name}"</span> será borrado.</p>
+              <p className="text-gray-500 text-sm mb-6">Esta acción no se puede deshacer. El servicio <span className="text-gray-800 dark:text-white font-bold italic">"{selectedService.nombre}"</span> será borrado.</p>
               <div className="flex gap-3 w-full">
                 <button onClick={closeModal} className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-zinc-800 font-semibold hover:bg-gray-200 dark:hover:bg-zinc-700 transition">Cancelar</button>
                 <button onClick={() => handleDelete(selectedService.id)} className="flex-1 py-3 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-500 transition">Sí, eliminar</button>

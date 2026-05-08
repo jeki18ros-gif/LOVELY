@@ -14,68 +14,157 @@ const initialProductos = [
   { id: 8, name: 'Acondicionador Hidratante', price: 'S/ 30.00', category: 'Cuidado capilar', categoryColor: 'bg-blue-500/20 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400', stock: 5, status: true, image: 'https://via.placeholder.com/40' },
 ];
 
-const ProductosTable = ({ filters }) => {
+const ProductosTable = ({ filters, categoriaSeleccionada }) => {
   const [productos, setProductos] = useState(initialProductos);
-  
-  // ESTADOS PARA MODALES Y SELECCIÓN
+
+  // MODALES
   const [selectedProducto, setSelectedProducto] = useState(null);
-  const [modalType, setModalType] = useState(null); // 'view', 'edit', 'delete'
+  const [modalType, setModalType] = useState(null);
 
   // PAGINACIÓN
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
+  // FILTROS
   const filteredItems = useMemo(() => {
     return productos.filter((p) => {
-      const matchesSearch = p.name.toLowerCase().includes(filters.search.toLowerCase());
-      
-      let matchesStock = true;
-      if (filters.stock === 'out') matchesStock = p.stock === 0;
-      else if (filters.stock === 'low') matchesStock = p.stock >= 1 && p.stock <= 10;
-      else if (filters.stock === 'medium') matchesStock = p.stock >= 11 && p.stock <= 50;
-      else if (filters.stock === 'high') matchesStock = p.stock > 50;
 
-      let matchesPrice = true;
-      const precioNumerico = parseFloat(p.price.replace('S/ ', ''));
-      if (filters.price === '0-50') matchesPrice = precioNumerico <= 50;
-      else if (filters.price === '50-150') matchesPrice = precioNumerico > 50 && precioNumerico <= 150;
-      else if (filters.price === '150-300') matchesPrice = precioNumerico > 150 && precioNumerico <= 300;
-      else if (filters.price === '300+') matchesPrice = precioNumerico > 300;
-
-      let matchesStatus = true;
-      if (filters.status !== '') {
-        matchesStatus = p.status === (filters.status === 'true');
+      // FILTRO POR CATEGORÍA
+      if (
+        categoriaSeleccionada &&
+        categoriaSeleccionada.nombre !== 'Todos'
+      ) {
+        if (p.categoria_id !== categoriaSeleccionada.id) {
+          return false;
+        }
       }
 
-      return matchesSearch && matchesStock && matchesPrice && matchesStatus;
+      // SEARCH
+      if (
+        filters.search &&
+        !p.name.toLowerCase().includes(filters.search.toLowerCase())
+      ) {
+        return false;
+      }
+
+      // STOCK
+      if (filters.stock === 'out' && p.stock !== 0) {
+        return false;
+      }
+
+      if (
+        filters.stock === 'low' &&
+        !(p.stock >= 1 && p.stock <= 10)
+      ) {
+        return false;
+      }
+
+      if (
+        filters.stock === 'medium' &&
+        !(p.stock >= 11 && p.stock <= 50)
+      ) {
+        return false;
+      }
+
+      if (
+        filters.stock === 'high' &&
+        !(p.stock > 50)
+      ) {
+        return false;
+      }
+
+      // PRECIO
+      const precioNumerico = parseFloat(
+        p.price.replace(/[^\d.]/g, '')
+      );
+
+      if (filters.price === '0-50' && precioNumerico > 50) {
+        return false;
+      }
+
+      if (
+        filters.price === '50-150' &&
+        !(precioNumerico > 50 && precioNumerico <= 150)
+      ) {
+        return false;
+      }
+
+      if (
+        filters.price === '150-300' &&
+        !(precioNumerico > 150 && precioNumerico <= 300)
+      ) {
+        return false;
+      }
+
+      if (
+        filters.price === '300+' &&
+        !(precioNumerico > 300)
+      ) {
+        return false;
+      }
+
+      // STATUS
+      if (
+        filters.status !== '' &&
+        p.status.toString() !== filters.status
+      ) {
+        return false;
+      }
+
+      return true;
     });
-  }, [filters, productos]);
+  }, [productos, filters, categoriaSeleccionada]);
 
+  // PAGINACIÓN
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
-  const currentItems = filteredItems.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  // HANDLERS
+  const currentItems = filteredItems.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // CERRAR MODAL
   const closeModal = () => {
     setSelectedProducto(null);
     setModalType(null);
   };
 
+  // CAMBIAR STATUS
   const toggleStatus = (id) => {
-    setProductos(productos.map(p => p.id === id ? { ...p, status: !p.status } : p));
+    setProductos(prev =>
+      prev.map(p =>
+        p.id === id
+          ? { ...p, status: !p.status }
+          : p
+      )
+    );
   };
 
+  // EDITAR
   const handleEditSubmit = (updatedData) => {
-    setProductos(productos.map(p => p.id === selectedProducto.id ? { ...p, ...updatedData } : p));
+    setProductos(prev =>
+      prev.map(p =>
+        p.id === selectedProducto.id
+          ? { ...p, ...updatedData }
+          : p
+      )
+    );
+
     closeModal();
   };
 
+  // ELIMINAR
   const handleDelete = (id) => {
-    setProductos(productos.filter(p => p.id !== id));
-    closeModal();
-    // Ajuste de página si el último elemento desaparece
-    if (currentItems.length === 1 && currentPage > 1) setCurrentPage(currentPage - 1);
-  };
+    setProductos(prev =>
+      prev.filter(p => p.id !== id)
+    );
 
+    closeModal();
+
+    if (currentItems.length === 1 && currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  };
   return (
     <div className="w-full text-gray-800 dark:text-gray-300 font-sans">
       <div className="w-full overflow-hidden rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-[#111111] shadow-xl">

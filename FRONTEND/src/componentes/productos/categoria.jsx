@@ -1,46 +1,157 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tag, Plus, MoreVertical } from 'lucide-react';
 import CategoriaFormulario from './formularios/categoriaFormulario';
+import { supabase } from '../../lib/supabase'; 
 
-const CategorySidebar = () => {
-  const [categorias, setCategorias] = useState([
-    { nombre: 'Todos', cantidad: 12, activo: true },
-    { nombre: 'Shampoo', cantidad: 3, activo: false },
-    { nombre: 'ampolla', cantidad: 4, activo: false },
-    { nombre: 'Tratamientos', cantidad: 2, activo: false },
-    { nombre: 'Otros', cantidad: 1, activo: false },
-  ]);
+const CategorySidebar = ({ onCategoriaChange }) => {
+  const [categorias, setCategorias] = useState([]);
 
   const [showForm, setShowForm] = useState(false);
   const [newCat, setNewCat] = useState('');
   const [editIndex, setEditIndex] = useState(null);
   const [menuOpen, setMenuOpen] = useState(null);
 
-  const handleSave = () => {
+  // OBTENER CATEGORÍAS
+  const obtenerCategorias = async () => {
+    const { data, error } = await supabase
+      .from('categorias')
+      .select('*')
+      .eq('tipo', 'producto');
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    const categoriasFormateadas = [
+      {
+        id: 0,
+        nombre: 'Todos',
+        cantidad: 0,
+        activo: true
+      },
+      ...data.map(cat => ({
+        ...cat,
+        cantidad: 0,
+        activo: false
+      }))
+    ];
+
+    setCategorias(categoriasFormateadas);
+  };
+
+  // CONTAR PRODUCTOS
+  const obtenerCantidadPorCategoria = async () => {
+    const { data, error } = await supabase
+      .from('productos')
+      .select('categoria_id');
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    const conteo = {};
+
+    data.forEach(p => {
+      conteo[p.categoria_id] =
+        (conteo[p.categoria_id] || 0) + 1;
+    });
+
+    setCategorias(prev =>
+      prev.map(cat => ({
+        ...cat,
+        cantidad:
+          cat.id === 0
+            ? data.length
+            : conteo[cat.id] || 0
+      }))
+    );
+  };
+
+  // CARGA INICIAL
+  useEffect(() => {
+    const cargarDatos = async () => {
+      await obtenerCategorias();
+
+      setTimeout(() => {
+        obtenerCantidadPorCategoria();
+      }, 100);
+    };
+
+    cargarDatos();
+  }, []);
+
+  // GUARDAR
+  const handleSave = async () => {
     if (!newCat.trim()) return;
 
     if (editIndex !== null) {
-      const updated = [...categorias];
-      updated[editIndex].nombre = newCat;
-      setCategorias(updated);
-      setEditIndex(null);
+
+      // EDITAR
+      const categoria = categorias[editIndex];
+
+      const { error } = await supabase
+        .from('categorias')
+        .update({
+          nombre: newCat
+        })
+        .eq('id', categoria.id);
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      setCategorias(prev =>
+        prev.map((cat, i) =>
+          i === editIndex
+            ? { ...cat, nombre: newCat }
+            : cat
+        )
+      );
+
     } else {
-      setCategorias([
-        ...categorias,
-        { nombre: newCat, cantidad: 0, activo: false },
+
+      // CREAR
+      const { data, error } = await supabase
+        .from('categorias')
+        .insert([
+          {
+            nombre: newCat,
+            tipo: 'producto'
+          }
+        ])
+        .select();
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      setCategorias(prev => [
+        ...prev,
+        {
+          ...data[0],
+          cantidad: 0,
+          activo: false
+        }
       ]);
     }
 
     setNewCat('');
     setShowForm(false);
+    setEditIndex(null);
   };
 
+  // CANCELAR
   const handleCancel = () => {
     setShowForm(false);
     setEditIndex(null);
     setNewCat('');
   };
 
+  // EDITAR
   const handleEdit = (index) => {
     setNewCat(categorias[index].nombre);
     setEditIndex(index);
@@ -48,12 +159,38 @@ const CategorySidebar = () => {
     setMenuOpen(null);
   };
 
-  const handleDelete = (index) => {
-    const updated = categorias.filter((_, i) => i !== index);
-    setCategorias(updated);
-    setMenuOpen(null);
+  // ELIMINAR
+  const handleDelete = async (index) => {
+    const categoria = categorias[index];
+
+    const { error } = await supabase
+      .from('categorias')
+      .delete()
+      .eq('id', categoria.id);
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    setCategorias(prev =>
+      prev.filter((_, i) => i !== index)
+    );
   };
 
+  // SELECCIONAR
+  const seleccionarCategoria = (index) => {
+    const updated = categorias.map((c, i) => ({
+      ...c,
+      activo: i === index
+    }));
+
+    setCategorias(updated);
+
+    const categoriaSeleccionada = updated[index];
+
+    onCategoriaChange(categoriaSeleccionada);
+  };
   return (
     <div className="w-full h-full max-h-[calc(100vh-3rem)] overflow-y-auto p-4 rounded-xl bg-white dark:bg-[#121212] border border-gray-200 dark:border-zinc-800 shadow-xl transition-colors duration-300">
       
@@ -92,13 +229,14 @@ const CategorySidebar = () => {
       )}
 
       {/* Lista */}
-      <ul className="space-y-1">
+            <ul className="space-y-1">
         {categorias.map((cat, index) => (
           <li key={index} className="relative">
             <div
+              onClick={() => seleccionarCategoria(index)}
               className={`
                 w-full flex items-center justify-between px-4 py-3 rounded-lg
-                transition-all duration-200 group
+                transition-all duration-200 group cursor-pointer
                 ${cat.activo
                   ? `bg-amber-100 dark:bg-amber-500/10 border-l-4 border-amber-500 text-amber-600 dark:text-amber-400`
                   : `text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-white`
@@ -108,15 +246,18 @@ const CategorySidebar = () => {
               <span className={`text-sm ${cat.activo ? 'font-semibold' : 'font-medium'}`}>
                 {cat.nombre}
               </span>
-
+      
               <div className="flex items-center gap-2">
                 <span className={`text-xs ${cat.activo ? 'text-amber-500' : 'text-gray-400'}`}>
                   ({cat.cantidad})
                 </span>
-
+      
                 <button
-                  onClick={() => setMenuOpen(menuOpen === index ? null : index)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => {
+                    e.stopPropagation(); // IMPORTANTE: Evita que al abrir el menú se dispare el click de la categoría
+                    setMenuOpen(menuOpen === index ? null : index);
+                  }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1"
                 >
                   <MoreVertical size={16} />
                 </button>
