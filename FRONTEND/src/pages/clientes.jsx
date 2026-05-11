@@ -133,23 +133,44 @@ if (seguimiento && seguimiento.trim() !== "") {
     setIsModalOpen(false);
   };
 
-  return (
-    <div className="min-h-screen p-6 bg-gray-50 dark:bg-[#0a0a0a]">
-      <ClientesHeader onOpenModal={() => setIsModalOpen(true)} />
-      
-      <FilterBar filters={filters} setFilters={setFilters} />
+return (
+    <div className="min-h-screen bg-gray-666 dark:bg-[#0a0a0a] transition-colors duration-300">
+      <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
+        
+        {/* SECCIÓN 1: HEADER (Título y Acciones principales) */}
+        <header className="relative">
+          <ClientesHeader onOpenModal={() => setIsModalOpen(true)} />
+        </header>
 
-    <ClientesTable 
-  filters={filters}
-  listaClientes={listaClientes}
-  setListaClientes={setListaClientes}
-  actualizarCliente={actualizarCliente}
-/>
-      <FormularioCliente 
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleSaveCliente}
-      />
+        {/* SECCIÓN 2: CONTROLES (Búsqueda y Filtros) */}
+        <section className="bg-white dark:bg-zinc-900/50 p-4 rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-sm">
+          <div className="flex flex-col gap-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-zinc-500 px-1">
+              Opciones de filtrado
+            </h3>
+            <FilterBar filters={filters} setFilters={setFilters} />
+          </div>
+        </section>
+
+        {/* SECCIÓN 3: CONTENIDO PRINCIPAL (Tabla/Listado) */}
+        <main className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <ClientesTable 
+              filters={filters}
+              listaClientes={listaClientes}
+              setListaClientes={setListaClientes}
+              actualizarCliente={actualizarCliente}
+            />
+          </div>
+        </main>
+
+        {/* COMPONENTE MODAL (Fuera del flujo visual) */}
+        <FormularioCliente 
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSubmit={handleSaveCliente}
+        />
+      </div>
     </div>
   );
 };

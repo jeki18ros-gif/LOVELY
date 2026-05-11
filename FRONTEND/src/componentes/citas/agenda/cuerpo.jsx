@@ -88,7 +88,7 @@ const AgendaBody = ({
                     .filter(app => {
 
                       const appDate =
-                        new Date(app.start);
+                        app.start;
 
                       const sameDay =
                         appDate.toDateString() ===

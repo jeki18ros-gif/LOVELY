@@ -8,7 +8,7 @@ const Citas = () => {
   const [openDetalle, setOpenDetalle] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false); // Estado para el formulario
   const [citaSeleccionada, setCitaSeleccionada] = useState(null);
-
+const [refreshKey, setRefreshKey] = useState(0);
   const handleOpen = (cita) => {
     setCitaSeleccionada(cita);
     setOpenDetalle(true);
@@ -23,7 +23,15 @@ const Citas = () => {
     // Aquí podrías actualizar tu lista de citas en la agenda
     setIsFormOpen(false);
   };
+  const actualizarDatosTabla = (citaActualizada) => {
 
+  setCitaSeleccionada(citaActualizada);
+
+  setRefreshKey(prev => prev + 1);
+};
+const eliminarCita = async (id) => {
+  console.log(id);
+};
   return (
     <div className="min-h-screen p-6 bg-gray-50 dark:bg-[#0a0a0a] text-gray-800 dark:text-white transition-colors duration-300">
       
@@ -37,9 +45,10 @@ const Citas = () => {
             <CitasHeader onOpenForm={() => setIsFormOpen(true)} />
 
             <div className="flex-1 flex flex-col">
-              <Agenda onSelectCita={handleOpen} />
+              <Agenda onSelectCita={handleOpen}
+               onUpdate={actualizarDatosTabla}
+              refreshKey={refreshKey} />
             </div>
-
           </div>
         </main>
       </div>
@@ -49,6 +58,8 @@ const Citas = () => {
         isOpen={openDetalle} 
         onClose={handleClose} 
         cita={citaSeleccionada}
+        onUpdate={actualizarDatosTabla}
+        onDelete={eliminarCita}
       />
 
       {/* MODAL DEL FORMULARIO */}
