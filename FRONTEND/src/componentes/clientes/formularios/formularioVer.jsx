@@ -38,8 +38,9 @@ const obtenerSeguimiento = async () => {
     .from('seguimiento')
     .select('*')
     .eq('id_cliente', cliente.id)
-    .order('fecha', { ascending: false });
-
+    .eq('tipo', 'cliente')
+    .order('fecha', { ascending: false })
+    .limit(1);
   if (error) {
     console.error(error);
     return;

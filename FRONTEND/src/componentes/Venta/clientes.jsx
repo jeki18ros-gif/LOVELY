@@ -358,26 +358,16 @@ const ClientCard = ({
                           "
                         >
                           No registrado
-                        </span>
-                      )
-                    }
-
+                        </span>)}
                   </div>
-
                 </div>
-
                 <button
                   onClick={() => {
-
                     setCliente(null);
-
                     setBusqueda('');
-
                     setClienteAnonimo(
                       false
-                    );
-
-                  }}
+                    );}}
                   className="
                     text-gray-500
                     hover:text-white

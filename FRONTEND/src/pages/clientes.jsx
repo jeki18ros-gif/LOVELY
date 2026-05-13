@@ -16,7 +16,7 @@ const Clientes = () => {
     visitas: ''
   });
 
-  // 🔥 cargar clientes al iniciar
+  // cargar clientes al iniciar
   useEffect(() => {
     obtenerClientes();
   }, []);
@@ -73,18 +73,47 @@ correo: correo?.trim() || null,
     return;
   }
 if (seguimiento && seguimiento.trim() !== "") {
-    const { error: errorSeguimiento } = await supabase
+
+  // buscar si ya existe seguimiento tipo cliente
+
+  const { data: seguimientoExistente } = await supabase
+    .from('seguimiento')
+    .select('id')
+    .eq('id_cliente', id)
+    .eq('tipo', 'cliente')
+    .limit(1)
+.maybeSingle();
+
+  // SI EXISTE → UPDATE
+
+  if (seguimientoExistente) {
+
+    const { error: errorUpdate } = await supabase
+      .from('seguimiento')
+      .update({
+        nota: seguimiento,
+        fecha: new Date().toISOString()
+      })
+      .eq('id', seguimientoExistente.id);
+
+    if (errorUpdate) {
+      console.error(errorUpdate);
+    }}
+
+  // SI NO EXISTE → INSERT
+  else {
+    const { error: errorInsert } = await supabase
       .from('seguimiento')
       .insert([
-        { 
-          id_cliente: id, 
-          nota: seguimiento, 
-          fecha: new Date().toISOString() 
-        }
-      ]);
+        {
+          id_cliente: id,
+          nota: seguimiento,
+          tipo: 'cliente',
+          fecha: new Date().toISOString()} ]);
 
-    if (errorSeguimiento) console.error("Error al guardar seguimiento:", errorSeguimiento);
-  }
+    if (errorInsert) {
+      console.error(errorInsert);
+    }}}
   // actualizar UI
   setListaClientes(prev =>
     prev.map(c =>
@@ -96,10 +125,7 @@ if (seguimiento && seguimiento.trim() !== "") {
             correo: correo || '—'
           }
         : c
-    )
-  );
-};
-  // 🔥 INSERT
+    ));};
   const handleSaveCliente = async (form) => {
     const { nombre, numero, correo } = form;
 

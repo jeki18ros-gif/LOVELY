@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, User, Phone, Mail, Save, RefreshCw, MessageSquare } from "lucide-react";
+import { supabase } from "../../../lib/supabase";
 
 export default function FormularioEditar({ isOpen, onClose, onSubmit, cliente }) {
   const [form, setForm] = useState({
@@ -10,15 +11,39 @@ export default function FormularioEditar({ isOpen, onClose, onSubmit, cliente })
   });
 
   useEffect(() => {
-    if (cliente && isOpen) {
-      setForm({
-        nombre: cliente.nombre || "",
-        numero: cliente.telefono === '—' ? "" : cliente.telefono,
-        correo: cliente.correo === '—' ? "" : cliente.correo,
-        seguimiento: "" 
-      });
-    }
-  }, [cliente, isOpen]);
+
+  const cargarSeguimiento = async () => {
+
+    if (!cliente || !isOpen) return;
+
+    const { data: seguimientoData } = await supabase
+      .from('seguimiento')
+      .select('*')
+      .eq('id_cliente', cliente.id)
+      .eq('tipo', 'cliente')
+      .order('fecha', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    setForm({
+      nombre: cliente.nombre || "",
+      numero: cliente.telefono === '—'
+        ? ""
+        : cliente.telefono,
+
+      correo: cliente.correo === '—'
+        ? ""
+        : cliente.correo,
+
+      seguimiento:
+        seguimientoData?.nota || ""
+    });
+
+  };
+
+  cargarSeguimiento();
+
+}, [cliente, isOpen]);
 
   if (!isOpen) return null;
 
