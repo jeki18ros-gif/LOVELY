@@ -1,73 +1,427 @@
-import React from 'react';
-import { Scissors, Search, ChevronDown, Beaker, Brush, Droplets } from 'lucide-react';
+import React, {
+  useState,
+  useEffect
+} from 'react';
 
-const ServiceList = () => {
-  const servicios = [
-    { id: 1, nombre: 'Corte de cabello', tiempo: '30 min', precio: '20.00', Icono: Scissors },
-    { id: 2, nombre: 'Tinte completo', tiempo: '60 min', precio: '50.00', Icono: Beaker },
-    { id: 3, nombre: 'Mechas', tiempo: '90 min', precio: '40.00', Icono: Brush },
-    { id: 4, nombre: 'Cepillado', tiempo: '20 min', precio: '15.00', Icono: Brush },
-    { id: 5, nombre: 'Tratamiento capilar', tiempo: '45 min', precio: '25.00', Icono: Droplets },
-  ];
+import {
+  Scissors,
+  ChevronDown,
+  Sparkles
+} from 'lucide-react';
+
+import { supabase }
+from '../../lib/supabase';
+
+const ServiceList = ({
+  serviciosSeleccionados,
+  setServiciosSeleccionados
+}) => {
+
+  const [servicios,
+    setServicios] =
+      useState([]);
+
+  const [categorias,
+    setCategorias] =
+      useState([]);
+
+  const [busqueda,
+    setBusqueda] =
+      useState('');
+
+  const [categoriaSeleccionada,
+    setCategoriaSeleccionada] =
+      useState('');
+
+  // Obtener categorías reales
+  useEffect(() => {
+
+    const obtenerCategorias =
+      async () => {
+
+     const { data, error } =
+           await supabase
+             .from('categorias')
+             .select('*')
+             .eq('tipo', 'servicio')
+             .order('nombre');
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      setCategorias(data || []);
+    };
+
+    obtenerCategorias();
+
+  }, []);
+
+  // Obtener servicios reales
+  useEffect(() => {
+
+    const obtenerServicios =
+      async () => {
+
+      let query =
+        supabase
+          .from('servicio')
+          .select(`
+            *,
+            categorias (
+              id,
+              nombre
+            )
+          `);
+
+      // Buscar
+      if (busqueda.trim()) {
+
+        query =
+          query.ilike(
+            'nombre',
+            `%${busqueda}%`
+          );
+      }
+
+      // Filtrar categoría
+      if (categoriaSeleccionada) {
+
+        query =
+          query.eq(
+            'categoria_id',
+            categoriaSeleccionada
+          );
+      }
+
+      const { data, error } =
+        await query.order(
+          'nombre'
+        );
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      setServicios(data || []);
+    };
+
+    obtenerServicios();
+
+  }, [
+    busqueda,
+    categoriaSeleccionada
+  ]);
 
   return (
-    <div className="max-w-md p-6 rounded-xl bg-white dark:bg-[#121212] text-gray-800 dark:text-white shadow-xl border border-gray-200 dark:border-zinc-800 transition-colors duration-200">
-      
-      {/* Header Sección */}
-      <div className="flex items-center gap-2 mb-6">
-        <Scissors className="text-purple-400 dark:text-purple-500" size={20} />
-        <h2 className="text-sm font-bold tracking-widest uppercase">Servicios</h2>
+<div
+  className="
+    max-w-md
+    h-[500px]
+    flex
+    flex-col
+    p-6
+    rounded-xl
+    bg-white
+    dark:bg-[#121212]
+    text-gray-800
+    dark:text-white
+    shadow-xl
+    border
+    border-gray-200
+    dark:border-zinc-800
+  "
+>
+
+      {/* HEADER */}
+      <div
+        className="
+          flex
+          items-center
+          gap-2
+          mb-6
+        "
+      >
+
+        <Scissors
+          className="
+            text-purple-400
+            dark:text-purple-500
+          "
+          size={20}
+        />
+
+        <h2
+          className="
+            text-sm
+            font-bold
+            tracking-widest
+            uppercase
+          "
+        >
+          Servicios
+        </h2>
+
       </div>
 
-      {/* Buscador y Filtro */}
-      <div className="flex gap-2 mb-6">
-        <div className="relative flex-grow">
-          <input 
-            type="text" 
-            placeholder="Buscar servicios..." 
-            className="w-full bg-gray-100 dark:bg-zinc-900 border-none rounded-lg py-2 pl-4 pr-10 text-sm focus:ring-1 focus:ring-amber-500 outline-none transition-all"
+      {/* BUSCADOR + FILTRO */}
+      <div
+        className="
+          flex
+          gap-2
+          mb-6
+        "
+      >
+
+        {/* INPUT */}
+        <div className="flex-grow">
+
+          <input
+            type="text"
+            value={busqueda}
+            onChange={(e) =>
+              setBusqueda(
+                e.target.value
+              )
+            }
+            placeholder="
+              Buscar servicios...
+            "
+            className="
+              w-full
+              bg-gray-100
+              dark:bg-zinc-900
+              rounded-lg
+              py-2
+              pl-4
+              pr-4
+              text-sm
+              outline-none
+              focus:ring-1
+              focus:ring-amber-500
+            "
           />
+
         </div>
-        <button className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-zinc-900 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-zinc-800 transition-colors">
-          Categorías
-          <ChevronDown size={14} />
-        </button>
+
+        {/* SELECT */}
+        <div className="relative">
+
+          <select
+            value={categoriaSeleccionada}
+            onChange={(e) =>
+              setCategoriaSeleccionada(
+                e.target.value
+              )
+            }
+            className="
+              appearance-none
+              bg-gray-100
+              dark:bg-zinc-900
+              rounded-lg
+              py-2
+              pl-3
+              pr-8
+              text-sm
+              outline-none
+              cursor-pointer
+            "
+          >
+
+            <option value="">
+              Todas
+            </option>
+
+            {
+              categorias.map(cat => (
+                <option
+                  key={cat.id}
+                  value={cat.id}
+                >
+                  {cat.nombre}
+                </option>
+              ))
+            }
+
+          </select>
+
+          <ChevronDown
+            size={14}
+            className="
+              absolute
+              right-2
+              top-1/2
+              -translate-y-1/2
+              pointer-events-none
+              text-gray-500
+            "
+          />
+
+        </div>
+
       </div>
 
-      {/* Lista de Items */}
-      <div className="space-y-5">
-        {servicios.map((serv) => (
-          <div key={serv.id} className="flex items-center justify-between group">
-            <div className="flex items-center gap-3">
-              {/* Icono de servicio (Avatar circular púrpura) */}
-              <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white shadow-md">
-                <serv.Icono size={18} />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium leading-tight">{serv.nombre}</span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">{serv.tiempo}</span>
-              </div>
-            </div>
+      {/* LISTA */}
+     <div
+  className="
+    flex-1
+    overflow-y-auto
+    pr-1
+    space-y-5
+  "
+>
 
-            <div className="flex items-center gap-4">
-              <span className="text-sm font-semibold">S/ {serv.precio}</span>
-              
-              {/* Selector de Cantidad */}
-              <div className="flex items-center gap-1 bg-gray-100 dark:bg-zinc-900 px-2 py-1 rounded-md text-xs cursor-pointer hover:bg-zinc-800 transition-colors">
-                <span>1</span>
-                <ChevronDown size={12} className="text-gray-500" />
+        {
+          servicios.map(serv => (
+
+            <div
+              key={serv.id}
+              className="
+                flex
+                items-center
+                justify-between
+              "
+            >
+
+              {/* IZQUIERDA */}
+              <div
+                className="
+                  flex
+                  items-center
+                  gap-3
+                "
+              >
+
+                <div
+                  className="
+                    w-10
+                    h-10
+                    rounded-full
+                    bg-purple-600
+                    flex
+                    items-center
+                    justify-center
+                    text-white
+                  "
+                >
+                  <Sparkles size={18}/>
+                </div>
+
+                <div
+                  className="
+                    flex
+                    flex-col
+                  "
+                >
+
+                  <span
+                    className="
+                      text-sm
+                      font-medium
+                    "
+                  >
+                    {serv.nombre}
+                  </span>
+
+                  <span
+                    className="
+                      text-xs
+                      text-gray-500
+                    "
+                  >
+                    {serv.duracion} min
+                  </span>
+
+                </div>
+
               </div>
 
-              {/* Checkbox Estilo Ámbar */}
-              <input 
-                type="checkbox" 
-                defaultChecked 
-                className="w-5 h-5 rounded border-gray-300 dark:border-zinc-700 text-amber-500 focus:ring-amber-500 bg-zinc-800 transition-all cursor-pointer"
-              />
+              {/* DERECHA */}
+              <div
+                className="
+                  flex
+                  items-center
+                  gap-4
+                "
+              >
+
+                <span
+                  className="
+                    text-sm
+                    font-semibold
+                  "
+                >
+                  S/ {serv.precio}
+                </span>
+
+                {/* CHECK */}
+               <input
+  type="checkbox"
+  checked={
+    serviciosSeleccionados.some(
+      s => s.id === serv.id
+    )
+  }
+  onChange={(e) => {
+
+    if (e.target.checked) {
+
+      setServiciosSeleccionados(prev => [
+        ...prev,
+        {
+          ...serv,
+          tipo: 'Servicio',
+          cantidad: 1
+        }
+      ]);
+
+    } else {
+
+      setServiciosSeleccionados(prev =>
+        prev.filter(
+          s => s.id !== serv.id
+        )
+      );
+
+    }
+
+  }}
+  className="
+    w-5
+    h-5
+    rounded
+    text-amber-500
+    focus:ring-amber-500
+    cursor-pointer
+  "
+/>
+
+              </div>
+
             </div>
-          </div>
-        ))}
+          ))
+        }
+
+        {/* VACÍO */}
+        {
+          servicios.length === 0 && (
+            <div
+              className="
+                py-10
+                text-center
+                text-sm
+                text-gray-500
+              "
+            >
+              No se encontraron servicios
+            </div>
+          )
+        }
+
       </div>
+
     </div>
   );
 };
