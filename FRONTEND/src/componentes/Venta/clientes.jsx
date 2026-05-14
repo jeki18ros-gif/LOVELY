@@ -49,7 +49,15 @@ const ClientCard = ({
         setClientes([]);
         return;
       }
-
+useEffect(() => {
+    if (cliente) {
+      setBusqueda(cliente.nombre);
+    } else {
+      setBusqueda('');
+    }
+    // Cerramos la lista de resultados al cambiar de venta
+    setClientes([]); 
+  }, [cliente]);
       const { data, error } =
         await supabase
           .from('clientes')
@@ -168,7 +176,7 @@ const ClientCard = ({
           type="text"
           value={busqueda}
           onChange={(e) => {
-
+const val = e.target.value;
             setBusqueda(
               e.target.value
             );

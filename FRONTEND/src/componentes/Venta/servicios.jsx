@@ -364,30 +364,22 @@ const ServiceList = ({
       s => s.id === serv.id
     )
   }
-  onChange={(e) => {
-
-    if (e.target.checked) {
-
-      setServiciosSeleccionados(prev => [
-        ...prev,
-        {
-          ...serv,
-          tipo: 'Servicio',
-          cantidad: 1
-        }
+ // ... dentro del map de servicios en el checkbox
+onChange={(e) => {
+  if (e.target.checked) {
+    const existe = serviciosSeleccionados.some(s => s.id === serv.id);
+    if (!existe) {
+      setServiciosSeleccionados([
+        ...serviciosSeleccionados,
+        { ...serv, tipo: 'Servicio', cantidad: 1 }
       ]);
-
-    } else {
-
-      setServiciosSeleccionados(prev =>
-        prev.filter(
-          s => s.id !== serv.id
-        )
-      );
-
     }
-
-  }}
+  } else {
+    setServiciosSeleccionados(
+      serviciosSeleccionados.filter(s => s.id !== serv.id)
+    );
+  }
+}}
   className="
     w-5
     h-5

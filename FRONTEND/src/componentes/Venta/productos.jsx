@@ -361,30 +361,23 @@ useEffect(() => {
       p => p.id === prod.id
     )
   }
-  onChange={(e) => {
-
-    if (e.target.checked) {
-
-      setProductosSeleccionados(prev => [
-        ...prev,
-        {
-          ...prod,
-          tipo: 'Producto',
-          cantidad: 1
-        }
+// ... dentro del map de productos en el checkbox
+onChange={(e) => {
+  if (e.target.checked) {
+    // Verificamos si ya existe por si acaso (evita duplicidad en el estado)
+    const existe = productosSeleccionados.some(p => p.id === prod.id);
+    if (!existe) {
+      setProductosSeleccionados([
+        ...productosSeleccionados,
+        { ...prod, tipo: 'Producto', cantidad: 1 }
       ]);
-
-    } else {
-
-      setProductosSeleccionados(prev =>
-        prev.filter(
-          p => p.id !== prod.id
-        )
-      );
-
     }
-
-  }}
+  } else {
+    setProductosSeleccionados(
+      productosSeleccionados.filter(p => p.id !== prod.id)
+    );
+  }
+}}
   className="
     w-5
     h-5
