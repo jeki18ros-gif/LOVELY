@@ -7,21 +7,39 @@ import SaleDetail from '../componentes/Venta/detalleventa';
 import PaymentModule from '../componentes/Venta/pago';
 
 const Venta = () => {
-  // 1. Estructura de estado principal
-  const [ventas, setVentas] = useState([
-    {
-      id: Date.now(),
-      nombre: 'Venta 1',
-      cliente: null,
-      clienteAnonimo: false,
-      productos: [],
-      servicios: [],
-      descuentoTipo: 'monto',
-      descuentoValor: 0
-    }
-  ]);
+  // 1. Estructura de estado principal inicializada desde localStorage
+  const [ventas, setVentas] = useState(() => {
+    const ventasGuardadas = localStorage.getItem('lista_ventas');
+    return ventasGuardadas ? JSON.parse(ventasGuardadas) : [
+      {
+        id: Date.now(),
+        nombre: 'Venta 1',
+        cliente: null,
+        clienteAnonimo: false,
+        productos: [],
+        servicios: [],
+        descuentoTipo: 'monto',
+        descuentoValor: 0
+      }
+    ];
+  });
 
-  const [ventaActivaId, setVentaActivaId] = useState(ventas[0].id);
+  // Inicializar el ID activo desde localStorage o usar el ID de la primera venta disponible
+  const [ventaActivaId, setVentaActivaId] = useState(() => {
+    const idGuardado = localStorage.getItem('venta_activa_id');
+    return idGuardado ? Number(idGuardado) : ventas[0].id;
+  });
+
+  // ==========================================
+  // EFFECT: Guardar en localStorage de forma automática
+  // ==========================================
+  useEffect(() => {
+    localStorage.setItem('lista_ventas', JSON.stringify(ventas));
+  }, [ventas]);
+
+  useEffect(() => {
+    localStorage.setItem('venta_activa_id', String(ventaActivaId));
+  }, [ventaActivaId]);
 
   // 2. Lógica de venta activa
   const ventaActiva = useMemo(() => 
@@ -38,7 +56,6 @@ const Venta = () => {
 
   // 3. Función "Nueva Venta"
   const handleNuevaVenta = () => {
-    // Evitar duplicar ventas vacías (Punto 14)
     const ultimaEsVacia = ventaActiva.productos.length === 0 && ventaActiva.servicios.length === 0;
     if (ultimaEsVacia && ventas.length > 0) return;
 
@@ -64,19 +81,20 @@ const Venta = () => {
       ...ventaActiva,
       id: nuevoId,
       nombre: `${ventaActiva.nombre} (copia)`,
-      cliente: null, // NO copiar cliente (Punto 4)
+      cliente: null, 
       clienteAnonimo: false
     };
     setVentas([...ventas, copia]);
     setVentaActivaId(nuevoId);
   };
 
-  // 13. Función "Cancelar Venta"
+  // 13. Función "Cancelar Venta" / "Limpiar al Confirmar"
   const handleCancelarVenta = (id) => {
     const filtradas = ventas.filter(v => v.id !== id);
     if (filtradas.length === 0) {
       const resetId = Date.now();
-      setVentas([{ id: resetId, nombre: 'Venta 1', cliente: null, productos: [], servicios: [], descuentoTipo: 'monto', descuentoValor: 0 }]);
+      const ventaInicial = [{ id: resetId, nombre: 'Venta 1', cliente: null, productos: [], servicios: [], descuentoTipo: 'monto', descuentoValor: 0 }];
+      setVentas(ventaInicial);
       setVentaActivaId(resetId);
     } else {
       setVentas(filtradas);
@@ -106,7 +124,7 @@ const Venta = () => {
       </div>
 
       <div className="grid grid-cols-12 gap-4">
-        {/* 7. Adaptar ClientCard */}
+        {/* ClientCard */}
         <div className="col-span-12 lg:col-span-3">
           <ClientCard
             cliente={ventaActiva.cliente}
@@ -116,7 +134,7 @@ const Venta = () => {
           />
         </div>
 
-        {/* 8. Adaptar ProductList */}
+        {/* ProductList */}
         <div className="col-span-12 lg:col-span-4">
           <ProductList
             productosSeleccionados={ventaActiva.productos}
@@ -124,7 +142,7 @@ const Venta = () => {
           />
         </div>
 
-        {/* 9. Adaptar ServiceList */}
+        {/* ServiceList */}
         <div className="col-span-12 lg:col-span-5">
           <ServiceList
             serviciosSeleccionados={ventaActiva.servicios}
@@ -132,7 +150,7 @@ const Venta = () => {
           />
         </div>
 
-        {/* 10. Adaptar SaleDetail */}
+        {/* SaleDetail */}
         <div className="col-span-12 lg:col-span-7">
           <SaleDetail
             cliente={ventaActiva.cliente}
@@ -151,10 +169,12 @@ const Venta = () => {
           />
         </div>
 
-        {/* 11. Adaptar PaymentModule */}
+        {/* PaymentModule */}
         <div className="col-span-12 lg:col-span-5">
           <PaymentModule
             total={total}
+            subtotal={subtotal}
+            descuento={descuento}
             ventaActiva={ventaActiva}
             onConfirmar={() => handleCancelarVenta(ventaActivaId)} 
             onCancelar={() => handleCancelarVenta(ventaActivaId)}
