@@ -1,174 +1,345 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  MinusCircle, 
-  ArrowDownCircle, 
+  Plus, 
+  ChevronLeft, 
+  ChevronRight, 
+  Wallet, 
   Package, 
   Droplets, 
-  Wrench, 
   AlertTriangle, 
   RotateCcw,
-  ChevronLeft,
-  ChevronRight,
-  Filter
+  X
 } from 'lucide-react';
+// IMPORTA TU CLIENTE DE SUPABASE
+import { supabase } from '../../lib/supabase'; 
 
 const Egresos = () => {
-
   const theme = {
     gold: 'text-[#D4AF37]',
     goldBg: 'bg-[#D4AF37]',
     goldBorder: 'border-[#D4AF37]',
   };
 
+  // ESTADOS PARA DATOS Y FILTROS
+  const [egresos, setEgresos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filtroFecha, setFiltroFecha] = useState('');
+  const [filtroCategoria, setFiltroCategoria] = useState('Todos');
+
+  // ESTADOS PARA EL MODAL DE NUEVO EGRESO
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [nuevoMonto, setNuevoMonto] = useState('');
+  const [nuevaDesc, setNuevaDesc] = useState('');
+  const [nuevaCat, setNuevaCat] = useState('Compra de Productos');
+  const [nuevoMetodo, setNuevoMetodo] = useState('Efectivo');
+
+  // ==========================================
+  // 1. PETICIÓN A SUPABASE (TRAER EGRESOS)
+  // ==========================================
+  const fetchEgresos = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('egresos')
+        .select('*')
+        .order('fecha', { ascending: false });
+
+      if (error) throw error;
+      setEgresos(data || []);
+    } catch (error) {
+      console.error('Error cargando egresos:', error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEgresos();
+  }, []);
+
+  // ==========================================
+  // 2. LÓGICA DEL FORMULARIO: NUEVO EGRESO
+  // ==========================================
+  const handleSaveEgreso = async (e) => {
+    e.preventDefault();
+    if (!nuevoMonto || parseFloat(nuevoMonto) <= 0) return;
+
+    try {
+      const { error } = await supabase
+        .from('egresos')
+        .insert([
+          {
+            monto: parseFloat(nuevoMonto),
+            categoria: nuevaCat,
+            descripcion: nuevaDesc,
+            metodo_pago: nuevoMetodo
+          }
+        ]);
+
+      if (error) throw error;
+
+      // Limpiar, cerrar modal y refrescar la tabla
+      setNuevoMonto('');
+      setNuevaDesc('');
+      setNuevaCat('Compra de Productos');
+      setNuevoMetodo('Efectivo');
+      setIsModalOpen(false);
+      fetchEgresos(); 
+    } catch (error) {
+      console.error('Error al guardar egreso:', error.message);
+      alert('No se pudo registrar el egreso');
+    }
+  };
+
+  // ==========================================
+  // 3. FILTROS EN CLIENTE
+  // ==========================================
+  const limpiarFiltros = () => {
+    setFiltroFecha('');
+    setFiltroCategoria('Todos');
+  };
+
+  const egresosFiltrados = egresos.filter(item => {
+    const cumpleFecha = filtroFecha ? item.fecha?.startsWith(filtroFecha) : true;
+    const cumpleCat = filtroCategoria === 'Todos' ? true : item.categoria === filtroCategoria;
+    return cumpleFecha && cumpleCat;
+  });
+
+  // ==========================================
+  // 4. CÁLCULO DE LAS TARJETAS (RESUMEN)
+  // ==========================================
+  const totales = egresos.reduce((acc, item) => {
+    const montoNum = Number(item.monto || 0);
+    acc.total += montoNum;
+
+    if (item.categoria === 'Compra de Productos') {
+      acc.productos += montoNum;
+    } else if (item.categoria === 'Pagos de Servicios' || item.categoria === 'Materiales') {
+      acc.servicios += montoNum;
+    } else {
+      acc.otros += montoNum; // Imprevistos / Devoluciones
+    }
+    return acc;
+  }, { total: 0, productos: 0, servicios: 0, otros: 0 });
+
   return (
     <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#0A0A0A] p-8 text-gray-800 dark:text-gray-100 transition-colors duration-300">
 
       {/* Header */}
       <header className="flex justify-between items-center mb-10">
-        <div>
-          <h1 className="text-3xl font-light tracking-[0.2em] uppercase text-black dark:text-white">
-            Egresos <span className={theme.gold}>/</span>
-          </h1>
-          <p className="text-[10px] uppercase tracking-widest opacity-50 mt-1">
-            Gestión de gastos y costos operativos
-          </p>
-        </div>
+        <h1 className="text-3xl font-light tracking-widest uppercase text-black dark:text-white">
+          Egresos <span className={theme.gold}>/</span>
+        </h1>
 
-        <button className={`${theme.goldBg} text-black px-6 py-2.5 rounded-sm flex items-center gap-2 hover:brightness-110 transition-all font-semibold uppercase text-xs tracking-wider shadow-lg shadow-[#D4AF37]/20`}>
-          <MinusCircle size={16} />
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className={`${theme.goldBg} text-black px-6 py-2.5 rounded-sm flex items-center gap-2 hover:brightness-110 transition-all font-medium uppercase text-sm tracking-tighter`}
+        >
+          <Plus size={18} />
           Nuevo Egreso
         </button>
       </header>
 
-      {/* Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-10">
-        
-        {/* Card principal */}
-        <div className="bg-black text-white dark:bg-white dark:text-black p-5 rounded-sm shadow-xl flex flex-col justify-between border-l-4 border-[#D4AF37]">
-          <p className="text-[10px] uppercase tracking-widest opacity-70">
-            Total Egresos
-          </p>
-          <h2 className="text-2xl font-bold mt-2">
-            S/ 4,820.50
-          </h2>
-        </div>
-
+      {/* Cards de Resumen (Mismo diseño que Ingresos) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         {[
-          { label: 'Productos', value: 'S/ 1,200', icon: Package },
-          { label: 'Materiales', value: 'S/ 450', icon: Droplets },
-          { label: 'Servicios', value: 'S/ 890', icon: ArrowDownCircle },
-          { label: 'Mantenimiento', value: 'S/ 320', icon: Wrench },
-        ].map((item, i) => (
+          { label: 'Total Egresos', value: totales.total, icon: Wallet },
+          { label: 'Productos', value: totales.productos, icon: Package },
+          { label: 'Servicios e Insumos', value: totales.servicios, icon: Droplets },
+          { label: 'Otros / Imprevistos', value: totales.otros, icon: AlertTriangle },
+        ].map((card, index) => (
           <div 
-            key={i} 
-            className="bg-white dark:bg-[#141414] p-5 rounded-sm border border-gray-200 dark:border-gray-800 transition-transform hover:-translate-y-1"
+            key={index} 
+            className="bg-white dark:bg-[#141414] p-6 border-b-2 border-[#D4AF37] shadow-xl rounded-sm"
           >
-            <div className="flex justify-between items-start opacity-60">
-              <p className="text-[9px] uppercase tracking-widest font-bold">
-                {item.label}
+            <div className="flex justify-between items-start mb-4">
+              <p className="text-xs uppercase tracking-widest text-gray-500">
+                {card.label}
               </p>
-              <item.icon size={14} className={theme.gold} />
+              <card.icon className={theme.gold} size={20} />
             </div>
-            <p className="text-xl font-light mt-2 tracking-tight">
-              {item.value}
-            </p>
+            <h2 className="text-2xl font-semibold tracking-tight">
+              - S/ {card.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </h2>
           </div>
         ))}
       </div>
 
       {/* Filtros */}
-      <div className="flex flex-wrap gap-4 mb-8 items-center bg-transparent border-b border-gray-200 dark:border-gray-800 pb-6">
-        
-        <div className="flex items-center gap-2 text-[#D4AF37]">
-          <Filter size={16} />
-          <span className="text-[10px] uppercase tracking-widest font-bold">
-            Filtrar por:
-          </span>
+      <div className="bg-white dark:bg-[#141414] p-6 mb-8 rounded-sm shadow-sm border border-gray-200 dark:border-gray-800">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest mb-2 opacity-60">Rango de Fechas</label>
+            <input 
+              type="date" 
+              value={filtroFecha}
+              onChange={(e) => setFiltroFecha(e.target.value)}
+              className="w-full bg-transparent border-b border-gray-300 dark:border-gray-700 p-2 focus:outline-none focus:border-[#D4AF37] dark:text-white text-black" 
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest mb-2 opacity-60">Categoría</label>
+            <select 
+              value={filtroCategoria}
+              onChange={(e) => setFiltroCategoria(e.target.value)}
+              className="w-full bg-transparent border-b border-gray-300 dark:border-gray-700 p-2 focus:outline-none focus:border-[#D4AF37] dark:bg-[#141414]"
+            >
+              <option value="Todos">Todas</option>
+              <option value="Compra de Productos">Compra de Productos</option>
+              <option value="Pagos de Servicios">Pagos de Servicios</option>
+              <option value="Imprevistos">Imprevistos</option>
+              <option value="Devoluciones">Devoluciones</option>
+            </select>
+          </div>
+
+          <button 
+            onClick={limpiarFiltros}
+            className="flex items-center justify-center gap-2 text-xs uppercase tracking-widest opacity-70 hover:opacity-100 transition-opacity pb-2"
+          >
+            <RotateCcw size={14} /> Limpiar Filtros
+          </button>
         </div>
-
-        <select className="bg-transparent border-none text-xs uppercase tracking-tighter focus:ring-0 cursor-pointer">
-          <option>Categoría: Todas</option>
-          <option>Operativos</option>
-          <option>Imprevistos</option>
-          <option>Devoluciones</option>
-        </select>
-
-        <input 
-          type="month" 
-          className="bg-transparent border-none text-xs uppercase focus:ring-0" 
-        />
-
-        <button className="ml-auto flex items-center gap-2 text-[10px] uppercase tracking-widest opacity-50 hover:opacity-100 transition-opacity">
-          <RotateCcw size={12} /> Limpiar
-        </button>
       </div>
 
-      {/* Tabla */}
-      <div className="bg-white dark:bg-[#141414] rounded-sm overflow-hidden border border-gray-200 dark:border-gray-800">
-        <table className="w-full text-left">
-          
-          <thead>
-            <tr className="bg-gray-50 dark:bg-[#1a1a1a] border-b border-gray-200 dark:border-gray-800">
-              <th className="p-5 text-[10px] uppercase tracking-[0.2em] font-semibold opacity-60">Fecha</th>
-              <th className="p-5 text-[10px] uppercase tracking-[0.2em] font-semibold opacity-60">Categoría</th>
-              <th className="p-5 text-[10px] uppercase tracking-[0.2em] font-semibold opacity-60">Descripción</th>
-              <th className="p-5 text-[10px] uppercase tracking-[0.2em] font-semibold opacity-60 text-right">Monto</th>
-            </tr>
-          </thead>
-
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {[
-              { date: '2024-05-02', cat: 'Compra de Productos', desc: 'Lote de tintes (Gama Dorada)', amount: '650.00', color: 'bg-blue-400' },
-              { date: '2024-05-01', cat: 'Pagos de Servicios', desc: 'Recibo de Energía Eléctrica', amount: '280.00', color: 'bg-purple-400' },
-              { date: '2024-04-28', cat: 'Imprevistos', desc: 'Reparación de grifería', amount: '120.00', color: 'bg-rose-400', icon: true },
-              { date: '2024-04-25', cat: 'Devoluciones', desc: 'Reembolso cliente por tratamiento', amount: '150.00', color: 'bg-orange-400' },
-            ].map((row, idx) => (
-              <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors group">
-                
-                <td className="p-5 text-sm font-light opacity-70">
-                  {row.date}
-                </td>
-
-                <td className="p-5">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-1.5 h-1.5 rounded-full ${row.color}`} />
-                    <span className="text-[11px] uppercase tracking-wider font-medium">
-                      {row.cat}
-                    </span>
-                  </div>
-                </td>
-
-                <td className="p-5 text-sm font-light italic opacity-60 group-hover:opacity-100 transition-opacity">
-                  {row.icon && (
-                    <AlertTriangle size={12} className="inline mr-2 text-rose-500" />
-                  )}
-                  {row.desc}
-                </td>
-
-                <td className={`p-5 text-sm font-bold text-right ${theme.gold}`}>
-                  - S/ {row.amount}
-                </td>
+      {/* Tabla Conectada */}
+      <div className="bg-white dark:bg-[#141414] rounded-sm overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-800">
+        {loading ? (
+          <div className="p-10 text-center uppercase tracking-widest text-sm opacity-50">Cargando base de datos...</div>
+        ) : (
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-[#1a1a1a] border-b border-gray-200 dark:border-gray-800">
+                <th className="p-4 text-[11px] uppercase tracking-widest font-medium">Fecha</th>
+                <th className="p-4 text-[11px] uppercase tracking-widest font-medium">Categoría</th>
+                <th className="p-4 text-[11px] uppercase tracking-widest font-medium">Descripción</th>
+                <th className="p-4 text-[11px] uppercase tracking-widest font-medium text-right">Monto</th>
+                <th className="p-4 text-[11px] uppercase tracking-widest font-medium">Método</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              {egresosFiltrados.map((row) => {
+                const esImprevisto = row.categoria === 'Imprevistos';
+                return (
+                  <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-[#1a1a1a] transition-colors group">
+                    <td className="p-4 text-sm font-light">
+                      {new Date(row.fecha).toLocaleDateString('es-ES')}
+                    </td>
+                    <td className="p-4 text-sm">
+                      <span className={`px-2 py-1 rounded-full text-[10px] uppercase ${
+                        esImprevisto ? 'bg-rose-900/20 text-rose-400' : 'bg-amber-900/20 text-amber-400'
+                      }`}>
+                        {row.categoria}
+                      </span>
+                    </td>
+                    <td className="p-4 text-sm opacity-80 italic">
+                      {esImprevisto && <AlertTriangle size={12} className="inline mr-1 text-rose-500" />}
+                      {row.descripcion}
+                    </td>
+                    <td className="p-4 text-sm font-bold text-right text-rose-500 dark:text-rose-400">
+                      - S/ {Number(row.monto).toFixed(2)}
+                    </td>
+                    <td className="p-4 text-sm font-light italic">{row.metodo_pago}</td>
+                  </tr>
+                );
+              })}
+              {egresosFiltrados.length === 0 && (
+                <tr>
+                  <td colSpan="5" className="p-8 text-center text-sm opacity-40">No hay egresos registrados</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
 
-        {/* Footer */}
-        <div className="p-4 flex justify-between items-center border-t border-gray-100 dark:border-gray-800">
-          <p className="text-[9px] uppercase tracking-[0.3em] opacity-40">
-            Elite Management System v1.0
-          </p>
+      {/* ==========================================
+          MODAL FORMULARIO NUEVO EGRESO
+         ========================================== */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex justify-center items-center z-50">
+          <div className="bg-white dark:bg-[#141414] w-full max-w-md p-6 border border-gray-200 dark:border-gray-800 shadow-2xl rounded-xs">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-light uppercase tracking-widest text-black dark:text-white">
+                Registrar Nuevo Egreso
+              </h3>
+              <button onClick={() => setIsModalOpen(false)} className="opacity-50 hover:opacity-100 transition-opacity">
+                <X size={20} />
+              </button>
+            </div>
 
-          <div className="flex gap-4">
-            <button className="hover:text-[#D4AF37] transition-colors">
-              <ChevronLeft size={20} />
-            </button>
-            <button className="hover:text-[#D4AF37] transition-colors">
-              <ChevronRight size={20} />
-            </button>
+            <form onSubmit={handleSaveEgreso} className="space-y-5">
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest mb-2 opacity-60">Monto (S/)</label>
+                <input 
+                  type="number" 
+                  step="0.01"
+                  required
+                  placeholder="0.00"
+                  value={nuevoMonto}
+                  onChange={(e) => setNuevoMonto(e.target.value)}
+                  className="w-full bg-transparent border-b border-gray-300 dark:border-gray-700 p-2 text-xl focus:outline-none focus:border-[#D4AF37]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest mb-2 opacity-60">Categoría</label>
+                <select 
+                  value={nuevaCat}
+                  onChange={(e) => setNuevaCat(e.target.value)}
+                  className="w-full bg-transparent border-b border-gray-300 dark:border-gray-700 p-2 text-sm focus:outline-none focus:border-[#D4AF37] dark:bg-[#141414]"
+                >
+                  <option value="Compra de Productos">Compra de Productos</option>
+                  <option value="Pagos de Servicios">Pagos de Servicios</option>
+                  <option value="Imprevistos">Imprevistos</option>
+                  <option value="Devoluciones">Devoluciones</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest mb-2 opacity-60">Descripción / Motivo</label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="Ej: Pago recibo de luz LuzSur, Lote de tintes, etc."
+                  value={nuevaDesc}
+                  onChange={(e) => setNuevaDesc(e.target.value)}
+                  className="w-full bg-transparent border-b border-gray-300 dark:border-gray-700 p-2 text-sm focus:outline-none focus:border-[#D4AF37]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest mb-2 opacity-60">Método de Pago</label>
+                <select 
+                  value={nuevoMetodo}
+                  onChange={(e) => setNuevoMetodo(e.target.value)}
+                  className="w-full bg-transparent border-b border-gray-300 dark:border-gray-700 p-2 text-sm focus:outline-none focus:border-[#D4AF37] dark:bg-[#141414]"
+                >
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Yape">Yape / Plin</option>
+                  <option value="Tarjeta">Tarjeta</option>
+                </select>
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button 
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="w-1/2 border border-gray-300 dark:border-gray-700 py-2 text-xs uppercase tracking-widest hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit"
+                  className={`w-1/2 ${theme.goldBg} text-black py-2 text-xs font-bold uppercase tracking-widest hover:brightness-110 transition-all`}
+                >
+                  Guardar Egreso
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-      </div>
+      )}
 
     </div>
   );

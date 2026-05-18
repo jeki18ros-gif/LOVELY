@@ -6,7 +6,9 @@ import {
   Repeat,
   Filter,
   RotateCcw,
-  User
+  User,
+  ChevronRight,
+  ChevronLeft
 } from 'lucide-react';
 
 export default function FinanzasHistory() {
@@ -162,6 +164,46 @@ export default function FinanzasHistory() {
             No hay movimientos
           </div>
         )}
+              {/*  NUEVA SECCIÓN: HISTORIAL */}
+              <div className="mt-12 bg-white dark:bg-[#141414] border dark:border-gray-800">
+        
+                <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex justify-between">
+                  <h3 className="text-xs uppercase tracking-widest">Último Cierre de Caja</h3>
+                  <span className="text-[10px] opacity-50">Registro reciente</span>
+                </div>
+        
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 dark:bg-[#1a1a1a]">
+                    <tr>
+                      <th className="p-3">Fecha</th>
+                      <th className="p-3">Hora</th>
+                      <th className="p-3">Usuario</th>
+                      <th className="p-3">Ingresos</th>
+                      <th className="p-3">Egresos</th>
+                      <th className="p-3">Diferencia</th>
+                      <th className="p-3">Estado</th>
+                    </tr>
+                  </thead>
+        
+                  <tbody>
+                    <tr className="border-t border-gray-200 dark:border-gray-800">
+                      <td className="p-3">2024-05-03</td>
+                      <td className="p-3">22:15</td>
+                      <td className="p-3">Admin</td>
+                      <td className="p-3">S/ 1200</td>
+                      <td className="p-3">S/ 300</td>
+                      <td className="p-3 text-green-500">0.00</td>
+                      <td className="p-3 text-green-500">Cuadrado</td>
+                    </tr>
+                  </tbody>
+                </table>
+        
+                {/* paginacion */}
+                <div className="flex justify-end gap-2 p-3">
+                  <ChevronLeft size={18}/>
+                  <ChevronRight size={18}/>
+                </div>
+              </div>
       </div>
 
     </div>
