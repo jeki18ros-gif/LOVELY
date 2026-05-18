@@ -10,7 +10,6 @@ import {
   TrendingDown,
   Coins
 } from 'lucide-react';
-// IMPORTA TU CLIENTE DE SUPABASE
 import { supabase } from '../../lib/supabase'; 
 
 const CierreCaja = () => {
@@ -25,28 +24,26 @@ const CierreCaja = () => {
     new Date().toISOString().split('T')[0] // Fecha de hoy por defecto (YYYY-MM-DD)
   );
   const [loading, setLoading] = useState(true);
+  const [baseInicial, setBaseInicial] = useState(0); // Monto inicial editable
 
-  // Valores calculados por el sistema para ese día
+  // Valores calculados por el sistema para ese día (Claves en minúsculas)
   const [datosSistema, setDatosSistema] = useState({
-    baseInicial: 100.00, // Puedes cambiarlo a dinámico si manejas una tabla de apertura
     ingresos: 0,
     egresos: 0,
     metodos: {
-      Efectivo: 0,
-      Yape: 0,
-      Plin: 0,
-      Tarjeta: 0,
-      Mixto: 0
+      efectivo: 0,
+      yape: 0,
+      plin: 0,
+      tarjeta: 0
     }
   });
 
   // 2. ESTADOS DEL FORMULARIO DE CUADRE (Valores ingresados por el cajero)
   const [valoresContados, setValoresContados] = useState({
-    Efectivo: '',
-    Yape: '',
-    Plin: '',
-    Tarjeta: '',
-    Mixto: ''
+    efectivo: '',
+    yape: '',
+    plin: '',
+    tarjeta: ''
   });
 
   // ==========================================
@@ -55,16 +52,15 @@ const CierreCaja = () => {
   const fetchDatosDelDia = async () => {
     setLoading(true);
     try {
-      // Definimos el rango del día seleccionado (desde las 00:00:00 hasta las 23:59:59)
       const inicioDia = `${fechaSeleccionada}T00:00:00.000Z`;
       const finDia = `${fechaSeleccionada}T23:59:59.999Z`;
 
-      // A. Traer todos los pagos (Ingresos tanto ordinarios como extras)
+      // A. Traer todos los pagos usando la columna correcta 'fecha'
       const { data: pagos, error: errorPagos } = await supabase
         .from('pago')
-        .select('monto, tipo') // tipo almacena 'Efectivo', 'Yape', etc.
-        .gte('created_at', inicioDia)
-        .lte('created_at', finDia);
+        .select('monto, tipo')
+        .gte('fecha', inicioDia)
+        .lte('fecha', finDia);
 
       if (errorPagos) throw errorPagos;
 
@@ -81,24 +77,23 @@ const CierreCaja = () => {
       const sumaEgresos = egresosData?.reduce((acc, curr) => acc + Number(curr.monto || 0), 0) || 0;
       
       let sumaIngresos = 0;
-      const metodosAcumulados = { Efectivo: 0, Yape: 0, Plin: 0, Tarjeta: 0, Mixto: 0 };
+      const metodosAcumulados = { efectivo: 0, yape: 0, plin: 0, tarjeta: 0 };
 
       pagos?.forEach(pago => {
         const monto = Number(pago.monto || 0);
         sumaIngresos += monto;
         
-        // Mapeamos o agrupamos según el tipo de método exacto que venga de la BD
-        if (metodosAcumulados[pago.tipo] !== undefined) {
-          metodosAcumulados[pago.tipo] += monto;
+        const metodoKey = pago.tipo?.toLowerCase();
+        if (metodosAcumulados[metodoKey] !== undefined) {
+          metodosAcumulados[metodoKey] += monto;
         }
       });
 
-      setDatosSistema(prev => ({
-        ...prev,
+      setDatosSistema({
         ingresos: sumaIngresos,
         egresos: sumaEgresos,
         metodos: metodosAcumulados
-      }));
+      });
 
     } catch (error) {
       console.error('Error cargando datos de cierre:', error.message);
@@ -115,7 +110,7 @@ const CierreCaja = () => {
   // 4. CALCULOS DERIVADOS DE GANANCIA Y DIFERENCIAS
   // ==========================================
   const gananciaDia = datosSistema.ingresos - datosSistema.egresos;
-  const saldoCajaEsperado = datosSistema.baseInicial + datosSistema.ingresos - datosSistema.egresos;
+  const saldoCajaEsperado = Number(baseInicial) + datosSistema.ingresos - datosSistema.egresos;
 
   // Manejar el cambio en los inputs de validación física
   const handleInputChange = (metodo, valor) => {
@@ -149,18 +144,34 @@ const CierreCaja = () => {
         .insert([
           {
             fecha_cierre: new Date().toISOString(),
-            base_inicial: datosSistema.baseInicial,
+            base_inicial: Number(baseInicial),
             ingresos_sistema: datosSistema.ingresos,
             egresos_sistema: datosSistema.egresos,
-            efectivo_contado: parseFloat(valoresContados.Efectivo) || 0,
-            // Guardamos la diferencia global en la base de datos
-            diferencia: diferenciaTotalGlobal,
+            efectivo_contado: parseFloat(valoresContados.efectivo) || 0,
+            yape_contado: parseFloat(valoresContados.yape) || 0,       // Nueva columna
+            plin_contado: parseFloat(valoresContados.plin) || 0,       // Nueva columna
+            tarjeta_contado: parseFloat(valoresContados.tarjeta) || 0,   // Nueva columna
             estado: 'cerrado'
+            // Omitimos 'diferencia' si es una columna calculada automáticamente en la BD
           }
         ]);
 
       if (error) throw error;
+      
       alert('¡Caja cerrada con éxito y guardada en el historial!');
+      
+      // Limpiar los campos del formulario tras un cierre exitoso
+      setBaseInicial(0);
+      setValoresContados({
+        efectivo: '',
+        yape: '',
+        plin: '',
+        tarjeta: ''
+      });
+
+      // Refrescar los datos de la pantalla para reflejar los cambios limpios
+      fetchDatosDelDia();
+
     } catch (error) {
       console.error('Error al efectuar el cierre:', error.message);
       alert('Hubo un error al guardar el cierre en la base de datos.');
@@ -197,7 +208,7 @@ const CierreCaja = () => {
         </button>
       </header>
 
-      {/* TARJETAS RESUMEN (Mismo estilo unificado que Ingresos/Egresos) */}
+      {/* TARJETAS RESUMEN */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         <div className="bg-white dark:bg-[#141414] p-6 border-b-2 border-gray-300 dark:border-gray-700 shadow-xl rounded-sm">
           <div className="flex justify-between items-start mb-4">
@@ -224,11 +235,20 @@ const CierreCaja = () => {
         </div>
 
         <div className="bg-white dark:bg-[#141414] p-6 border-b-2 border-blue-500/50 shadow-xl rounded-sm">
-          <div className="flex justify-between items-start mb-4">
+          <div className="flex justify-between items-start mb-2">
             <p className="text-xs uppercase tracking-widest text-gray-500">Base Apertura</p>
             <Coins className="text-blue-400" size={20} />
           </div>
-          <h2 className="text-2xl font-semibold tracking-tight">S/ {datosSistema.baseInicial.toFixed(2)}</h2>
+          <div className="flex items-center gap-1">
+            <span className="text-xl font-semibold opacity-70">S/</span>
+            <input 
+              type="number" 
+              step="0.01"
+              value={baseInicial} 
+              onChange={(e) => setBaseInicial(e.target.value)}
+              className="text-2xl font-semibold tracking-tight bg-transparent border-b border-dashed border-gray-400 dark:border-gray-600 focus:outline-none focus:border-blue-400 w-full"
+            />
+          </div>
         </div>
       </div>
 
@@ -250,7 +270,7 @@ const CierreCaja = () => {
                 <tr className="border-b border-gray-200 dark:border-gray-800 text-[10px] uppercase tracking-widest opacity-60">
                   <th className="p-4">Método</th>
                   <th className="p-4 text-right">Monto en Sistema</th>
-                  <th className="p-4 text-center w-48">Monto Físico/Real Contado (S/)</th>
+                  <th className="p-4 text-center w-48">Monto Apps/Real Contado (S/)</th>
                   <th className="p-4 text-right">Diferencia</th>
                 </tr>
               </thead>
@@ -258,7 +278,7 @@ const CierreCaja = () => {
                 {Object.keys(datosSistema.metodos).map((metodo) => {
                   const dif = calcularDiferencia(metodo);
                   return (
-                    <tr key={metodo} className="hover:bg-gray-50 dark:hover:bg-white/2 transition-colors">
+                    <tr key={metodo} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                       <td className="p-4 font-medium uppercase tracking-wider text-xs opacity-80">{metodo}</td>
                       <td className="p-4 text-right font-light">S/ {datosSistema.metodos[metodo].toFixed(2)}</td>
                       <td className="p-4 text-center">
@@ -268,7 +288,7 @@ const CierreCaja = () => {
                           placeholder="0.00"
                           value={valoresContados[metodo]}
                           onChange={(e) => handleInputChange(metodo, e.target.value)}
-                          className="w-32 bg-gray-50 dark:bg-[#1f1f1f] border-b border-gray-300 dark:border-gray-700 px-2 py-1 text-right focus:outline-none focus:border-[#D4AF37] font-semibold"
+                          className="w-32 bg-gray-50 dark:bg-[#1f1f1f] border-b border-gray-300 dark:border-gray-700 px-2 py-1 text-right focus:outline-none focus:border-[#D4AF37] font-semibold text-black dark:text-white"
                         />
                       </td>
                       <td className={`p-4 text-right font-bold ${dif === 0 ? 'opacity-40' : dif > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>

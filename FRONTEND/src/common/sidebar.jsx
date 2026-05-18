@@ -30,12 +30,7 @@ const menuItems = [
       { name: "Cierre de caja", path: "/finanzas/cierre" },
     ],
   },
-  { name: "Historial", icon: History,children: [
-      { name: "Finanzas", path: "/historial/finanzas" },
-      { name: "Ventas", path: "/historial/ventas" },
-      { name: "Citas", path: "/historial/citas" },
-      { name: "Movimientos", path: "/historial/movimientos" },
-    ], },
+  { name: "Historial", icon: History, path: "/historial" },
 ];
 
 export default function Sidebar({ isOpen, setIsOpen }) {

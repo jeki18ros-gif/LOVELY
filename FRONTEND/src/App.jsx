@@ -10,10 +10,7 @@ import Citas from "./pages/citas";
 import Ingresos from "./pages/Finanzas/ingresos";
 import Egresos from "./pages/Finanzas/egresos";
 import CierreCaja from "./pages/Finanzas/cierreCaja";
-import CitasHistory from "./pages/historial/citas";
-import VentaHistory from "./pages/historial/ventas";
-import FinanzasHistory from "./pages/historial/finanzas";
-import MovimientosHistory from "./pages/historial/movimientos";
+import HistoryGeneral from "./pages/historial";
 import { motion } from "framer-motion";
 
 export default function App() {
@@ -43,10 +40,7 @@ export default function App() {
             <Route path="/finanzas/ingresos" element={<Ingresos />} />
             <Route path="/finanzas/egresos" element={<Egresos />} />
             <Route path="/finanzas/cierre" element={<CierreCaja />} />
-            <Route path="/historial/citas" element={<CitasHistory/>}/>
-            <Route path="/historial/finanzas" element={<FinanzasHistory/>}/>
-            <Route path="/historial/ventas" element={<VentaHistory/>}/>
-            <Route path="/historial/movimientos" element={<MovimientosHistory/>}/>
+            <Route path="historial" element={<HistoryGeneral/>}/>
           </Routes>
         </motion.div>
       </div>

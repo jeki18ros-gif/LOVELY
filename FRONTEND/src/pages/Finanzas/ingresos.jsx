@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
-  ChevronLeft, 
-  ChevronRight, 
   Wallet, 
   TrendingUp, 
   ShoppingBag, 
   Star,
   RotateCcw,
-  X
+  X,
+  Eye,
+  Edit2,
+  AlertCircle // Icono para advertencias de edición
 } from 'lucide-react';
-// 1. IMPORTA TU CLIENTE DE SUPABASE
 import { supabase } from '../../lib/supabase'; 
 
 const Ingresos = () => {
@@ -33,29 +33,43 @@ const Ingresos = () => {
   const [nuevaDesc, setNuevaDesc] = useState('');
   const [nuevoMetodo, setNuevoMetodo] = useState('Efectivo');
 
+  // ESTADOS PARA EL MODAL DE VER DETALLE
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedIngreso, setSelectedIngreso] = useState(null);
+
+  // ESTADOS PARA EL MODAL DE EDICIÓN / CORRECCIÓN (MODIFICADOS)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [editMonto, setEditMonto] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editMetodo, setEditMetodo] = useState('Efectivo');
+  const [esVenta, setEsVenta] = useState(false); // Determina si bloqueamos el monto
+
   // ==========================================
-  // 2. PETICIÓN A SUPABASE (TRAER PAGOS)
+  // PETICIÓN A SUPABASE (TRAER PAGOS)
   // ==========================================
   const fetchIngresos = async () => {
     setLoading(true);
     try {
-      // Hacemos un select de pagos y un JOIN implícito hacia 'ventas' usando el codigo_venta
-      // Esto nos permite saber si el pago viene de una venta y qué tipo de detalle tiene.
       const { data, error } = await supabase
         .from('pago')
         .select(`
           id,
-          created_at,
           tipo,
           descripcion,
           monto,
+          fecha,
           codigo_venta,
-          ventas (
+          ventas!codigo_venta(
             id,
-            nombre_cliente
+            fecha,
+            nombre_cliente,
+            detalle_venta (
+              tipo,
+              subtotal
+            )
           )
-        `)
-        .order('created_at', { ascending: false });
+        `);
 
       if (error) throw error;
       setIngresos(data || []);
@@ -71,7 +85,7 @@ const Ingresos = () => {
   }, []);
 
   // ==========================================
-  // 3. LÓGICA DEL FORMULARIO: INGRESO EXTRA
+  // LÓGICA DEL FORMULARIO: INGRESO EXTRA Y EDICIÓN
   // ==========================================
   const handleSaveIngresoExtra = async (e) => {
     e.preventDefault();
@@ -83,15 +97,15 @@ const Ingresos = () => {
         .insert([
           {
             monto: parseFloat(nuevoMonto),
-            tipo: nuevoMetodo, // Efectivo, Yape, etc.
+            tipo: nuevoMetodo,
             descripcion: nuevaDesc || 'Ingreso Extra',
-            codigo_venta: null // Al ser extra, viaja explícitamente como NULL
+            codigo_venta: null,
+            fecha: new Date().toISOString()
           }
         ]);
 
       if (error) throw error;
 
-      // Resetear formulario, cerrar modal y refrescar la lista
       setNuevoMonto('');
       setNuevaDesc('');
       setNuevoMetodo('Efectivo');
@@ -103,8 +117,52 @@ const Ingresos = () => {
     }
   };
 
+  // Abre el modal aplicando las reglas de negocio de permisos
+  const handleAbirEdicion = (ingreso) => {
+    setEditId(ingreso.id);
+    setEditMonto(ingreso.monto);
+    setEditDesc(ingreso.descripcion || `Venta registrada de ${ingreso.ventas?.nombre_cliente || 'Cliente'}`);
+    setEditMetodo(ingreso.tipo || 'Efectivo');
+    
+    // Si tiene un codigo_venta, es una venta registrada -> Bloqueamos edición de monto
+    setEsVenta(!!ingreso.codigo_venta); 
+    
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateIngreso = async (e) => {
+    e.preventDefault();
+    if (!editMonto || parseFloat(editMonto) <= 0) return;
+
+    try {
+      // Definimos el objeto con los datos a actualizar
+      const datosActualizados = {
+        descripcion: editDesc,
+        tipo: editMetodo
+      };
+
+      // Solo adjuntamos el monto a la mutación si NO es una venta registrada
+      if (!esVenta) {
+        datosActualizados.monto = parseFloat(editMonto);
+      }
+
+      const { error } = await supabase
+        .from('pago')
+        .update(datosActualizados)
+        .eq('id', editId);
+
+      if (error) throw error;
+
+      setIsEditModalOpen(false);
+      fetchIngresos();
+    } catch (error) {
+      console.error('Error al corregir el ingreso:', error.message);
+      alert('No se pudieron actualizar los datos del ingreso');
+    }
+  };
+
   // ==========================================
-  // 4. FILTROS EN CLIENTE (JAVASCRIPT)
+  // FILTROS Y CLASIFICACIÓN DINÁMICA
   // ==========================================
   const limpiarFiltros = () => {
     setFiltroFecha('');
@@ -112,46 +170,88 @@ const Ingresos = () => {
     setFiltroMetodo('Todos');
   };
 
-  const ingresosFiltrados = ingresos.filter(item => {
-    const cumpleFecha = filtroFecha ? item.created_at?.startsWith(filtroFecha) : true;
-    
-    // Determinar si es Servicio, Producto o Extra basándonos en la descripción o código de venta
-    let tipoItem = 'Extra';
-    if (item.codigo_venta) {
-      // Identificación rápida por palabras clave (puedes adaptarlo según tu lógica de negocio)
-      const descLower = item.descripcion?.toLowerCase() || '';
-      if (descLower.includes('shampoo') || descLower.includes('producto')) {
-        tipoItem = 'Producto';
-      } else {
-        tipoItem = 'Servicio'; // Por defecto si viene de una venta
-      }
+  const obtenerTipoReal = (item) => {
+    if (!item.codigo_venta) return 'Extra';
+    if (item.ventas?.detalle_venta && item.ventas.detalle_venta.length > 0) {
+      const tieneProducto = item.ventas.detalle_venta.some(d => d.tipo?.toLowerCase() === 'producto');
+      const tieneServicio = item.ventas.detalle_venta.some(d => d.tipo?.toLowerCase() === 'servicio');
+      
+      if (tieneProducto && tieneServicio) return 'Mixto';
+      if (tieneProducto) return 'Producto';
+      if (tieneServicio) return 'Servicio';
     }
+    return 'Servicio'; 
+  };
+
+  const ingresosFiltrados = ingresos.filter(item => {
+    const fechaOrigen = item.ventas?.fecha || item.fecha;
+    const cumpleFecha = filtroFecha ? fechaOrigen?.startsWith(filtroFecha) : true;
+    
+    const tipoItem = obtenerTipoReal(item);
     const cumpleTipo = filtroTipo === 'Todos' ? true : tipoItem === filtroTipo;
-    const cumpleMetodo = filtroMetodo === 'Todos' ? true : item.tipo === filtroMetodo;
+    const cumpleMetodo = filtroMetodo === 'Todos' ? true : item.tipo?.toLowerCase() === filtroMetodo.toLowerCase();
 
     return cumpleFecha && cumpleTipo && cumpleMetodo;
   });
 
   // ==========================================
-  // 5. CÁLCULO DE LAS TARJETAS (RESUMEN)
+  // CÁLCULO DE LAS TARJETAS (RESUMEN)
   // ==========================================
   const totales = ingresos.reduce((acc, item) => {
     const montoNum = Number(item.monto || 0);
     acc.total += montoNum;
 
-    if (!item.codigo_venta) {
-      acc.extra += montoNum;
-    } else {
-      // Separación demostrativa (ajústala si guardas banderas específicas en tu BD)
-      const descLower = item.descripcion?.toLowerCase() || '';
-      if (descLower.includes('shampoo') || descLower.includes('producto')) {
-        acc.productos += montoNum;
-      } else {
+    const tipoReal = obtenerTipoReal(item);
+
+    switch (tipoReal) {
+      case 'Servicio':
         acc.servicios += montoNum;
-      }
+        break;
+      case 'Producto':
+        acc.productos += montoNum;
+        break;
+      case 'Mixto':
+        acc.servicios += montoNum / 2;
+        acc.productos += montoNum / 2;
+        break;
+      case 'Extra':
+        acc.extra += montoNum;
+        break;
+      default:
+        break;
     }
+
     return acc;
-  }, { total: 0, servicios: 0, productos: 0, extra: 0 });
+  }, {
+    total: 0,
+    servicios: 0,
+    productos: 0,
+    extra: 0
+  });
+
+  // ==========================================
+  // LÓGICA PARA CONTROLAR EL MANEJO DEL DETALLE
+  // ==========================================
+  const handleVerDetalle = (ingreso) => {
+    let desgloseServicios = 0;
+    let desgloseProductos = 0;
+
+    if (ingreso.ventas?.detalle_venta) {
+      ingreso.ventas.detalle_venta.forEach(d => {
+        const sub = Number(d.subtotal || 0);
+        if (d.tipo?.toLowerCase() === 'producto') desgloseProductos += sub;
+        if (d.tipo?.toLowerCase() === 'servicio') desgloseServicios += sub;
+      });
+    }
+
+    setSelectedIngreso({
+      ...ingreso,
+      tipoReal: obtenerTipoReal(ingreso),
+      desgloseServicios,
+      desgloseProductos
+    });
+    setIsDetailModalOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#0A0A0A] p-8 text-gray-800 dark:text-gray-100 transition-colors duration-300">
@@ -162,7 +262,6 @@ const Ingresos = () => {
           Ingresos <span className={theme.gold}>|</span>
         </h1>
 
-        {/* BOTÓN PARA ABRIR MODAL */}
         <button 
           onClick={() => setIsModalOpen(true)}
           className={`${theme.goldBg} text-black px-6 py-2.5 rounded-sm flex items-center gap-2 hover:brightness-110 transition-all font-medium uppercase text-sm tracking-tighter`}
@@ -220,6 +319,7 @@ const Ingresos = () => {
               <option value="Todos">Todos</option>
               <option value="Servicio">Servicio</option>
               <option value="Producto">Producto</option>
+              <option value="Mixto">Mixto</option>
               <option value="Extra">Extra</option>
             </select>
           </div>
@@ -232,9 +332,10 @@ const Ingresos = () => {
               className="w-full bg-transparent border-b border-gray-300 dark:border-gray-700 p-2 focus:outline-none focus:border-[#D4AF37] dark:bg-[#141414]"
             >
               <option value="Todos">Todos</option>
-              <option value="Efectivo">Efectivo</option>
-              <option value="Yape">Yape / Plin</option>
-              <option value="Tarjeta">Tarjeta</option>
+              <option value="efectivo">Efectivo</option>
+              <option value="yape">Yape</option>
+              <option value="plin">Plin</option>
+              <option value="tarjeta">Tarjeta</option>
             </select>
           </div>
 
@@ -260,36 +361,72 @@ const Ingresos = () => {
                 <th className="p-4 text-[11px] uppercase tracking-widest font-medium">Descripción</th>
                 <th className="p-4 text-[11px] uppercase tracking-widest font-medium">Monto</th>
                 <th className="p-4 text-[11px] uppercase tracking-widest font-medium">Método</th>
+                <th className="p-4 text-[11px] uppercase tracking-widest font-medium text-center">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {ingresosFiltrados.map((row) => {
-                const esExtra = !row.codigo_venta;
+                const tipoReal = obtenerTipoReal(row);
+                const fechaBase = row.ventas?.fecha || row.fecha;
+
+                const fechaFormateada = fechaBase
+                  ? new Date(fechaBase).toLocaleDateString('es-PE', {
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit'
+                    })
+                  : 'Sin fecha';
+
+                const badgeEstilos = {
+                  'Servicio': 'bg-blue-900/20 text-blue-400',
+                  'Producto': 'bg-emerald-900/20 text-emerald-400',
+                  'Mixto': 'bg-amber-900/20 text-amber-400',
+                  'Extra': 'bg-purple-900/20 text-purple-400'
+                };
+
                 return (
                   <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-[#1a1a1a] transition-colors">
-                    <td className="p-4 text-sm font-light">
-                      {new Date(row.created_at).toLocaleDateString('es-ES')}
-                    </td>
+                    <td className="p-4 text-sm font-light">{fechaFormateada}</td>
                     <td className="p-4 text-sm">
-                      <span className={`px-2 py-1 rounded-full text-[10px] uppercase ${
-                        esExtra ? 'bg-purple-900/20 text-purple-400' : 'bg-blue-900/20 text-blue-400'
-                      }`}>
-                        {esExtra ? 'Extra' : 'Venta'}
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-medium uppercase tracking-wider ${badgeEstilos[tipoReal] || 'bg-gray-900/20 text-gray-400'}`}>
+                        {tipoReal}
                       </span>
                     </td>
                     <td className="p-4 text-sm opacity-80">
-                      {row.descripcion || `Venta registrada de ${row.ventas?.nombre_cliente || 'Cliente'}`}
+                      {row.descripcion && row.descripcion !== 'mixto'
+                        ? row.descripcion 
+                        : `Venta registrada de ${row.ventas?.nombre_cliente || 'Cliente'}`}
                     </td>
                     <td className={`p-4 text-sm font-semibold ${theme.gold}`}>
                       S/ {Number(row.monto).toFixed(2)}
                     </td>
-                    <td className="p-4 text-sm font-light italic">{row.tipo}</td>
+                    <td className="p-4 text-sm font-light italic text-gray-600 dark:text-gray-400">
+                      {row.tipo}
+                    </td>
+
+                    <td className="p-4 text-sm text-center flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => handleVerDetalle(row)}
+                        className="text-gray-400 hover:text-[#D4AF37] transition-colors p-1"
+                        title="Ver Desglose Especifico"
+                      >
+                        <Eye size={17} />
+                      </button>
+
+                      <button
+                        onClick={() => handleAbirEdicion(row)}
+                        className="text-gray-400 hover:text-blue-400 transition-colors p-1"
+                        title="Corregir datos de venta"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
               {ingresosFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan="5" className="p-8 text-center text-sm opacity-40">No hay registros para los filtros seleccionados</td>
+                  <td colSpan="6" className="p-8 text-center text-sm opacity-40">No hay registros para los filtros seleccionados</td>
                 </tr>
               )}
             </tbody>
@@ -297,17 +434,15 @@ const Ingresos = () => {
         )}
       </div>
 
-      {/* ==========================================
-          5. MODAL FORMULARIO INGRESO EXTRA
-         ========================================== */}
+      {/* MODAL INGRESO EXTRA */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex justify-center items-center z-50 animate-fadeIn">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex justify-center items-center z-50">
           <div className="bg-white dark:bg-[#141414] w-full max-w-md p-6 border border-gray-200 dark:border-gray-800 shadow-2xl rounded-xs">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-light uppercase tracking-widest text-black dark:text-white">
                 Registrar Ingreso Extra
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="opacity-50 hover:opacity-100 transition-opacity">
+              <button onClick={() => setIsModalOpen(false)} className="opacity-50 hover:opacity-100">
                 <X size={20} />
               </button>
             </div>
@@ -331,7 +466,7 @@ const Ingresos = () => {
                 <input 
                   type="text" 
                   required
-                  placeholder="Ej: Propina especial, Venta de café, etc."
+                  placeholder="Ej: Propina, Alquiler de espacio, etc."
                   value={nuevaDesc}
                   onChange={(e) => setNuevaDesc(e.target.value)}
                   className="w-full bg-transparent border-b border-gray-300 dark:border-gray-700 p-2 text-sm focus:outline-none focus:border-[#D4AF37]"
@@ -346,7 +481,8 @@ const Ingresos = () => {
                   className="w-full bg-transparent border-b border-gray-300 dark:border-gray-700 p-2 text-sm focus:outline-none focus:border-[#D4AF37] dark:bg-[#141414]"
                 >
                   <option value="Efectivo">Efectivo</option>
-                  <option value="Yape">Yape / Plin</option>
+                  <option value="Yape">Yape</option>
+                  <option value="Plin">Plin</option>
                   <option value="Tarjeta">Tarjeta</option>
                 </select>
               </div>
@@ -355,18 +491,192 @@ const Ingresos = () => {
                 <button 
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="w-1/2 border border-gray-300 dark:border-gray-700 py-2 text-xs uppercase tracking-widest hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  className="w-1/2 border border-gray-300 dark:border-gray-700 py-2 text-xs uppercase tracking-widest hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
                   Cancelar
                 </button>
                 <button 
                   type="submit"
-                  className={`w-1/2 ${theme.goldBg} text-black py-2 text-xs font-bold uppercase tracking-widest hover:brightness-110 transition-all`}
+                  className={`w-1/2 ${theme.goldBg} text-black py-2 text-xs font-bold uppercase tracking-widest hover:brightness-110`}
                 >
                   Guardar Ingreso
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EDICIÓN CON PERMISOS INTELIGENTES */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex justify-center items-center z-50">
+          <div className="bg-white dark:bg-[#141414] w-full max-w-md p-6 border border-gray-200 dark:border-gray-800 shadow-2xl rounded-xs">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-light uppercase tracking-widest text-black dark:text-white">
+                Corregir Datos del Ingreso
+              </h3>
+              <button onClick={() => setIsEditModalOpen(false)} className="opacity-50 hover:opacity-100">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Aviso visual si el monto está bloqueado */}
+            {esVenta && (
+              <div className="mb-4 bg-blue-500/10 border border-blue-500/20 text-blue-500 dark:text-blue-400 p-3 rounded-sm text-xs flex gap-2 items-start">
+                <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                <span>
+                  Este monto proviene de una venta enlazada. Para cambiar el valor económico, edítalo desde el módulo de <strong>Ventas</strong> para mantener el stock y desglose cuadrado.
+                </span>
+              </div>
+            )}
+
+            <form onSubmit={handleUpdateIngreso} className="space-y-5">
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest mb-2 opacity-60">
+                  Monto (S/) {esVenta && <span className="text-red-400">(Bloqueado)</span>}
+                </label>
+                <input 
+                  type="number" 
+                  step="0.01"
+                  required
+                  disabled={esVenta} // Permiso aplicado: Deshabilitado si es venta
+                  value={editMonto}
+                  onChange={(e) => setEditMonto(e.target.value)}
+                  className={`w-full bg-transparent border-b border-gray-300 dark:border-gray-700 p-2 text-xl focus:outline-none ${
+                    esVenta ? 'opacity-40 cursor-not-allowed border-dashed' : 'focus:border-[#D4AF37]'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest mb-2 opacity-60">Descripción / Concepto</label>
+                <input 
+                  type="text" 
+                  required
+                  value={editDesc}
+                  onChange={(e) => setEditDesc(e.target.value)}
+                  className="w-full bg-transparent border-b border-gray-300 dark:border-gray-700 p-2 text-sm focus:outline-none focus:border-[#D4AF37]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest mb-2 opacity-60">Método de Pago</label>
+                <select 
+                  value={editMetodo}
+                  onChange={(e) => setEditMetodo(e.target.value)}
+                  className="w-full bg-transparent border-b border-gray-300 dark:border-gray-700 p-2 text-sm focus:outline-none focus:border-[#D4AF37] dark:bg-[#141414]"
+                >
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Yape">Yape</option>
+                  <option value="Plin">Plin</option>
+                  <option value="Tarjeta">Tarjeta</option>
+                </select>
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button 
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="w-1/2 border border-gray-300 dark:border-gray-700 py-2 text-xs uppercase tracking-widest hover:bg-gray-100 dark:hover:bg-gray-800"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit"
+                  className={`w-1/2 ${theme.goldBg} text-black py-2 text-xs font-bold uppercase tracking-widest hover:brightness-110`}
+                >
+                  Actualizar Datos
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DETALLE ESPECÍFICO DEL INGRESO */}
+      {isDetailModalOpen && selectedIngreso && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex justify-center items-center z-50">
+          <div className="bg-white dark:bg-[#141414] w-full max-w-md p-6 border border-gray-200 dark:border-gray-800 shadow-2xl rounded-sm">
+            <div className="flex justify-between items-center mb-6 border-b border-gray-100 dark:border-gray-800 pb-3">
+              <h3 className="text-md font-medium uppercase tracking-widest text-black dark:text-white">
+                Detalle del Ingreso
+              </h3>
+              <button onClick={() => setIsDetailModalOpen(false)} className="opacity-50 hover:opacity-100">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <span className="block text-[10px] uppercase tracking-widest opacity-50">Concepto / Descripción</span>
+                <p className="text-sm font-normal mt-0.5">
+                  {selectedIngreso.descripcion && selectedIngreso.descripcion !== 'mixto'
+                    ? selectedIngreso.descripcion 
+                    : `Venta de productos/servicios`}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="block text-[10px] uppercase tracking-widest opacity-50">Origen / Cliente</span>
+                  <p className="text-sm font-normal mt-0.5">
+                    {selectedIngreso.ventas?.nombre_cliente || 'Ingreso Extra Externo'}
+                  </p>
+                </div>
+                <div>
+                  <span className="block text-[10px] uppercase tracking-widest opacity-50">Código Venta</span>
+                  <p className="text-sm font-light font-mono mt-0.5 text-[#D4AF37]">
+                    {selectedIngreso.codigo_venta || 'N/A'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="border-t border-b border-gray-100 dark:border-gray-800 py-3 my-2 space-y-2">
+                <span className="block text-[10px] uppercase tracking-widest opacity-50 mb-1">Desglose Específico</span>
+                
+                {selectedIngreso.tipoReal === 'Extra' ? (
+                  <div className="flex justify-between text-sm py-1">
+                    <span className="opacity-70">Monto Único (Extra):</span>
+                    <span className="font-medium">S/ {Number(selectedIngreso.monto).toFixed(2)}</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="opacity-70 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-blue-500"></span> Por Servicios:
+                      </span>
+                      <span className="font-medium">S/ {selectedIngreso.desgloseServicios.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="opacity-70 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Por Productos:
+                      </span>
+                      <span className="font-medium">S/ {selectedIngreso.desgloseProductos.toFixed(2)}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="flex justify-between items-center pt-2">
+                <div>
+                  <span className="block text-[10px] uppercase tracking-widest opacity-50">Método de Pago</span>
+                  <p className="text-xs italic opacity-80">{selectedIngreso.tipo}</p>
+                </div>
+                <div className="text-right">
+                  <span className="block text-[10px] uppercase tracking-widest opacity-50">Monto Total Cobrado</span>
+                  <p className={`text-xl font-bold ${theme.gold}`}>S/ {Number(selectedIngreso.monto).toFixed(2)}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <button 
+                onClick={() => setIsDetailModalOpen(false)}
+                className="w-full border border-gray-300 dark:border-gray-700 py-2.5 text-xs uppercase tracking-widest hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                Cerrar Detalle
+              </button>
+            </div>
           </div>
         </div>
       )}

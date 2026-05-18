@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
-  ChevronLeft, 
-  ChevronRight, 
   Wallet, 
   Package, 
   Droplets, 
   AlertTriangle, 
   RotateCcw,
-  X
+  X,
+  Edit2
 } from 'lucide-react';
-// IMPORTA TU CLIENTE DE SUPABASE
 import { supabase } from '../../lib/supabase'; 
 
 const Egresos = () => {
@@ -32,6 +30,14 @@ const Egresos = () => {
   const [nuevaDesc, setNuevaDesc] = useState('');
   const [nuevaCat, setNuevaCat] = useState('Compra de Productos');
   const [nuevoMetodo, setNuevoMetodo] = useState('Efectivo');
+
+  // ESTADOS PARA EL MODAL DE EDICIÓN / CORRECCIÓN
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [editMonto, setEditMonto] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editCat, setEditCat] = useState('Compra de Productos');
+  const [editMetodo, setEditMetodo] = useState('Efectivo');
 
   // ==========================================
   // 1. PETICIÓN A SUPABASE (TRAER EGRESOS)
@@ -72,13 +78,12 @@ const Egresos = () => {
             monto: parseFloat(nuevoMonto),
             categoria: nuevaCat,
             descripcion: nuevaDesc,
-            metodo_pago: nuevoMetodo
+            metodo_pago: nuevoMetodo // Sincronizado con tu BD (metodo_pago)
           }
         ]);
 
       if (error) throw error;
 
-      // Limpiar, cerrar modal y refrescar la tabla
       setNuevoMonto('');
       setNuevaDesc('');
       setNuevaCat('Compra de Productos');
@@ -88,6 +93,43 @@ const Egresos = () => {
     } catch (error) {
       console.error('Error al guardar egreso:', error.message);
       alert('No se pudo registrar el egreso');
+    }
+  };
+
+  // ==========================================
+  // LÓGICA DE EDICIÓN / CORRECCIÓN DE EGRESOS
+  // ==========================================
+  const handleAbrirEdicion = (egreso) => {
+    setEditId(egreso.id);
+    setEditMonto(egreso.monto);
+    setEditDesc(egreso.descripcion);
+    setEditCat(egreso.categoria);
+    setEditMetodo(egreso.metodo_pago || 'Efectivo');
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateEgreso = async (e) => {
+    e.preventDefault();
+    if (!editMonto || parseFloat(editMonto) <= 0) return;
+
+    try {
+      const { error } = await supabase
+        .from('egresos')
+        .update({
+          monto: parseFloat(editMonto),
+          categoria: editCat,
+          descripcion: editDesc,
+          metodo_pago: editMetodo
+        })
+        .eq('id', editId);
+
+      if (error) throw error;
+
+      setIsEditModalOpen(false);
+      fetchEgresos();
+    } catch (error) {
+      console.error('Error al actualizar el egreso:', error.message);
+      alert('No se pudieron guardar los cambios del egreso');
     }
   };
 
@@ -117,7 +159,7 @@ const Egresos = () => {
     } else if (item.categoria === 'Pagos de Servicios' || item.categoria === 'Materiales') {
       acc.servicios += montoNum;
     } else {
-      acc.otros += montoNum; // Imprevistos / Devoluciones
+      acc.otros += montoNum; 
     }
     return acc;
   }, { total: 0, productos: 0, servicios: 0, otros: 0 });
@@ -140,7 +182,7 @@ const Egresos = () => {
         </button>
       </header>
 
-      {/* Cards de Resumen (Mismo diseño que Ingresos) */}
+      {/* Cards de Resumen */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         {[
           { label: 'Total Egresos', value: totales.total, icon: Wallet },
@@ -215,6 +257,7 @@ const Egresos = () => {
                 <th className="p-4 text-[11px] uppercase tracking-widest font-medium">Descripción</th>
                 <th className="p-4 text-[11px] uppercase tracking-widest font-medium text-right">Monto</th>
                 <th className="p-4 text-[11px] uppercase tracking-widest font-medium">Método</th>
+                <th className="p-4 text-[11px] uppercase tracking-widest font-medium text-center">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -223,7 +266,11 @@ const Egresos = () => {
                 return (
                   <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-[#1a1a1a] transition-colors group">
                     <td className="p-4 text-sm font-light">
-                      {new Date(row.fecha).toLocaleDateString('es-ES')}
+                      {new Date(row.fecha).toLocaleDateString('es-PE', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                      })}
                     </td>
                     <td className="p-4 text-sm">
                       <span className={`px-2 py-1 rounded-full text-[10px] uppercase ${
@@ -240,12 +287,22 @@ const Egresos = () => {
                       - S/ {Number(row.monto).toFixed(2)}
                     </td>
                     <td className="p-4 text-sm font-light italic">{row.metodo_pago}</td>
+                    
+                    <td className="p-4 text-sm text-center">
+                      <button
+                        onClick={() => handleAbrirEdicion(row)}
+                        className="text-gray-400 hover:text-blue-400 transition-colors p-1"
+                        title="Corregir datos de egreso"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
               {egresosFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan="5" className="p-8 text-center text-sm opacity-40">No hay egresos registrados</td>
+                  <td colSpan="6" className="p-8 text-center text-sm opacity-40">No hay egresos registrados</td>
                 </tr>
               )}
             </tbody>
@@ -253,9 +310,7 @@ const Egresos = () => {
         )}
       </div>
 
-      {/* ==========================================
-          MODAL FORMULARIO NUEVO EGRESO
-         ========================================== */}
+      {/* MODAL FORMULARIO NUEVO EGRESO */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex justify-center items-center z-50">
           <div className="bg-white dark:bg-[#141414] w-full max-w-md p-6 border border-gray-200 dark:border-gray-800 shadow-2xl rounded-xs">
@@ -316,7 +371,7 @@ const Egresos = () => {
                   className="w-full bg-transparent border-b border-gray-300 dark:border-gray-700 p-2 text-sm focus:outline-none focus:border-[#D4AF37] dark:bg-[#141414]"
                 >
                   <option value="Efectivo">Efectivo</option>
-                  <option value="Yape">Yape / Plin</option>
+                  <option value="Yape / Plin">Yape / Plin</option>
                   <option value="Tarjeta">Tarjeta</option>
                 </select>
               </div>
@@ -334,6 +389,90 @@ const Egresos = () => {
                   className={`w-1/2 ${theme.goldBg} text-black py-2 text-xs font-bold uppercase tracking-widest hover:brightness-110 transition-all`}
                 >
                   Guardar Egreso
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EDITAR / CORREGIR EGRESO */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex justify-center items-center z-50">
+          <div className="bg-white dark:bg-[#141414] w-full max-w-md p-6 border border-gray-200 dark:border-gray-800 shadow-2xl rounded-xs">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-light uppercase tracking-widest text-black dark:text-white">
+                Corregir Egreso
+              </h3>
+              <button onClick={() => setIsEditModalOpen(false)} className="opacity-50 hover:opacity-100 transition-opacity">
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateEgreso} className="space-y-5">
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest mb-2 opacity-60">Monto (S/)</label>
+                <input 
+                  type="number" 
+                  step="0.01"
+                  required
+                  value={editMonto}
+                  onChange={(e) => setEditMonto(e.target.value)}
+                  className="w-full bg-transparent border-b border-gray-300 dark:border-gray-700 p-2 text-xl focus:outline-none focus:border-[#D4AF37]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest mb-2 opacity-60">Categoría</label>
+                <select 
+                  value={editCat}
+                  onChange={(e) => setEditCat(e.target.value)}
+                  className="w-full bg-transparent border-b border-gray-300 dark:border-gray-700 p-2 text-sm focus:outline-none focus:border-[#D4AF37] dark:bg-[#141414]"
+                >
+                  <option value="Compra de Productos">Compra de Productos</option>
+                  <option value="Pagos de Servicios">Pagos de Servicios</option>
+                  <option value="Imprevistos">Imprevistos</option>
+                  <option value="Devoluciones">Devoluciones</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest mb-2 opacity-60">Descripción / Motivo</label>
+                <input 
+                  type="text" 
+                  required
+                  value={editDesc}
+                  onChange={(e) => setEditDesc(e.target.value)}
+                  className="w-full bg-transparent border-b border-gray-300 dark:border-gray-700 p-2 text-sm focus:outline-none focus:border-[#D4AF37]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest mb-2 opacity-60">Método de Pago</label>
+                <select 
+                  value={editMetodo}
+                  onChange={(e) => setEditMetodo(e.target.value)}
+                  className="w-full bg-transparent border-b border-gray-300 dark:border-gray-700 p-2 text-sm focus:outline-none focus:border-[#D4AF37] dark:bg-[#141414]"
+                >
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Yape / Plin">Yape / Plin</option>
+                  <option value="Tarjeta">Tarjeta</option>
+                </select>
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button 
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="w-1/2 border border-gray-300 dark:border-gray-700 py-2 text-xs uppercase tracking-widest hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit"
+                  className={`w-1/2 ${theme.goldBg} text-black py-2 text-xs font-bold uppercase tracking-widest hover:brightness-110 transition-all`}
+                >
+                  Actualizar Egreso
                 </button>
               </div>
             </form>
