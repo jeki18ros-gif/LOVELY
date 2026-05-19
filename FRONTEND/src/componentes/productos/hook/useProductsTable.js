@@ -230,32 +230,65 @@ const closeModal = () => {
     );
   };
 
-  /* =========================
-     ELIMINAR
-  ========================= */
+/* =========================
+    ELIMINAR PRODUCTO (Y GUARDAR HISTORIAL)
+   ========================= */
+const handleDelete = async (id) => {
+  try {
+    // 1. Encontrar el producto en el estado local para rescatar sus últimos valores conocidos
+    const productoAEliminar = products.find(p => p.id === id);
+    
+    if (!productoAEliminar) {
+      alert("No se encontró el producto localmente.");
+      return;
+    }
 
-  const handleDelete = async (id) => {
+    // 2. Registrar el movimiento de eliminación en el historial antes de borrarlo
+    const { error: historialError } = await supabase
+      .from('historial_productos')
+      .insert({
+        producto_id: productoAEliminar.id,
+        nombre_producto: productoAEliminar.nombre,
+        accion: 'Eliminado',
+        // El estado anterior era el valor actual del producto
+        valores_anteriores: {
+          precio: productoAEliminar.precio,
+          stock: productoAEliminar.stock
+        },
+        // Al eliminarse, ya no cuenta con valores actuales activos
+        valores_actuales: null 
+      });
 
-    const { error } = await supabase
+    if (historialError) {
+      console.error("Error al registrar historial de eliminación:", historialError);
+      // Opcional: Podrías detener el flujo aquí si el log de auditoría es obligatorio
+    }
+
+    // 3. Proceder con el borrado físico del producto en la base de datos
+    const { error: deleteError } = await supabase
       .from('producto')
       .delete()
       .eq('id', id);
 
-    if (error) {
-      console.error(error);
-      return;
+    if (deleteError) {
+      throw deleteError;
     }
 
-    setProducts(prev =>
-      prev.filter(p => p.id !== id)
-    );
-
+    // 4. Actualizar la interfaz removiendo el producto de la lista visual
+    setProducts(prev => prev.filter(p => p.id !== id));
     closeModal();
 
     if (currentItems.length === 1 && currentPage > 1) {
       setCurrentPage(prev => prev - 1);
     }
-  };
+
+    alert('Producto eliminado del inventario correctamente. Historial guardado.');
+
+  } catch (error) {
+    console.error("Error crítico en el proceso de borrado:", error);
+    alert("No se pudo eliminar el producto: " + error.message);
+  }
+};
 
   /* =========================
      ACTUALIZAR PRODUCTO
