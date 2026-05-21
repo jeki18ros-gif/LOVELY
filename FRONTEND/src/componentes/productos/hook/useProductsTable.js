@@ -233,48 +233,28 @@ const closeModal = () => {
 /* =========================
     ELIMINAR PRODUCTO (Y GUARDAR HISTORIAL)
    ========================= */
+/* =========================
+    ELIMINAR PRODUCTO (El historial ahora se guarda vía Trigger SQL)
+   ========================= */
 const handleDelete = async (id) => {
   try {
-    // 1. Encontrar el producto en el estado local para rescatar sus últimos valores conocidos
+    // 1. Verificar si existe localmente
     const productoAEliminar = products.find(p => p.id === id);
-    
     if (!productoAEliminar) {
       alert("No se encontró el producto localmente.");
       return;
     }
 
-    // 2. Registrar el movimiento de eliminación en el historial antes de borrarlo
-    const { error: historialError } = await supabase
-      .from('historial_productos')
-      .insert({
-        producto_id: productoAEliminar.id,
-        nombre_producto: productoAEliminar.nombre,
-        accion: 'Eliminado',
-        // El estado anterior era el valor actual del producto
-        valores_anteriores: {
-          precio: productoAEliminar.precio,
-          stock: productoAEliminar.stock
-        },
-        // Al eliminarse, ya no cuenta con valores actuales activos
-        valores_actuales: null 
-      });
-
-    if (historialError) {
-      console.error("Error al registrar historial de eliminación:", historialError);
-      // Opcional: Podrías detener el flujo aquí si el log de auditoría es obligatorio
-    }
-
-    // 3. Proceder con el borrado físico del producto en la base de datos
+    // 2. Proceder directamente con el borrado físico.
+    // El Trigger de la BD se activará al instante y creará el log 'Eliminado'.
     const { error: deleteError } = await supabase
       .from('producto')
       .delete()
       .eq('id', id);
 
-    if (deleteError) {
-      throw deleteError;
-    }
+    if (deleteError) throw deleteError;
 
-    // 4. Actualizar la interfaz removiendo el producto de la lista visual
+    // 3. Actualizar la interfaz removiendo el producto de la lista visual
     setProducts(prev => prev.filter(p => p.id !== id));
     closeModal();
 
@@ -282,14 +262,13 @@ const handleDelete = async (id) => {
       setCurrentPage(prev => prev - 1);
     }
 
-    alert('Producto eliminado del inventario correctamente. Historial guardado.');
+    alert('Producto eliminado correctamente. Historial de auditoría generado automáticamente.');
 
   } catch (error) {
     console.error("Error crítico en el proceso de borrado:", error);
     alert("No se pudo eliminar el producto: " + error.message);
   }
 };
-
   /* =========================
      ACTUALIZAR PRODUCTO
   ========================= */

@@ -1,58 +1,304 @@
-import React from 'react';
-import { RotateCcw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { RotateCcw, Eye, X, History } from 'lucide-react';
+import { supabase } from "../../../lib/supabase";
 
-export default function HistoryServicio({ movimientos }) {
-  // Filtrar solo los de tipo "Servicio"
-  const servicios = movimientos.filter(m => m.tipo === 'Servicio');
+export default function HistoryServicio() {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedLog, setSelectedLog] = useState(null);
 
+  const fetchHistorial = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('historial_servicios')
+        .select('*')
+        .order('fecha', { ascending: false });
+
+      if (error) {
+        alert("Error de Supabase (Servicios): " + error.message);
+        throw error;
+      }
+      
+      setLogs(data || []);
+    } catch (error) {
+      console.error("Error cargando historial de servicios:", error);
+    } finally {
+      loading && setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHistorial();
+  }, []);
+
+  const formatFechaLog = (isoString) => {
+    if (!isoString) return '-';
+    const date = new Date(isoString);
+    return date.toLocaleString('es-PE', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+const handleRevertir = async (log) => {
+    try {
+      if (log.accion === 'Editado' && log.valores_anteriores) {
+        // Construimos el objeto de actualización desde los valores anteriores del JSON
+        const updateData = {
+          precio: Number(log.valores_anteriores.precio),
+          duracion: Number(log.valores_anteriores.duracion || 0),
+        };
+
+        if (log.valores_anteriores.nombre) updateData.nombre = log.valores_anteriores.nombre;
+        if (log.valores_anteriores.descripcion) updateData.descripcion = log.valores_anteriores.descripcion;
+        if (log.valores_anteriores.estado !== undefined) updateData.estado = log.valores_anteriores.estado;
+
+        // Al actualizar la tabla, el trigger de la base de datos creará la traza del cambio automáticamente
+        const { error } = await supabase
+          .from('servicio')
+          .update(updateData)
+          .eq('id', log.servicio_id);
+
+        if (error) throw error;
+
+        alert('¡Servicio revertido con éxito!');
+        fetchHistorial();
+      }
+    } catch (error) {
+      console.error("Error al revertir servicio:", error);
+      alert("No se pudo revertir: " + error.message);
+    }
+  };
   return (
-    <table className="w-full text-left border-collapse">
-      <thead>
-        <tr className="border-b border-gray-200 dark:border-gray-800 text-[11px] uppercase tracking-widest opacity-60 bg-gray-50 dark:bg-[#1a1a1a]">
-          <th className="p-4">Operación</th>
-          <th className="p-4">Servicio Modificado</th>
-          <th className="p-4">Auditoría de Valores (Precio)</th>
-          <th className="p-4">Autor</th>
-          <th className="p-4">Fecha Log</th>
-          <th className="p-4 text-center">Acción Sincronizada</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-sm">
-        {servicios.map(m => (
-          <tr key={m.id} className="hover:bg-gray-50/50 dark:hover:bg-white/2 transition-colors">
-            <td className="p-4">
-              <span className={`px-2 py-0.5 text-[10px] rounded-sm font-bold uppercase ${
-                m.accion === 'Creado' ? 'text-emerald-400 bg-emerald-500/10' : m.accion === 'Editado' ? 'text-amber-400 bg-amber-500/10' : 'text-rose-400 bg-rose-500/10'
-              }`}>
-                {m.accion}
-              </span>
-            </td>
-            <td className="p-4 font-light">{m.nombre}</td>
-            <td className="p-4 text-xs">
-              {m.anterior && m.actual ? (
-                <span>
-                  <span className="text-rose-400 line-through">S/ {m.anterior.precio}</span>
-                  <span className="mx-2 text-gray-400">→</span>
-                  <span className="text-emerald-400 font-medium">S/ {m.actual.precio}</span>
-                </span>
-              ) : m.accion === 'Creado' ? (
-                <span className="text-emerald-400 font-medium">Alta: S/ {m.actual?.precio}</span>
-              ) : (
-                <span className="text-rose-400 font-medium">Baja (S/ {m.anterior?.precio})</span>
-              )}
-            </td>
-            <td className="p-4">{m.usuario}</td>
-            <td className="p-4 text-xs opacity-60">{m.fecha}</td>
-            <td className="p-4 text-center">
-              {(m.accion === 'Editado' || m.accion === 'Eliminado') && (
-                <button className="text-xs text-[#D4AF37] font-medium tracking-wide hover:underline inline-flex items-center gap-1">
-                  <RotateCcw size={12}/> Revertir cambio
-                </button>
-              )}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div className="p-6 bg-white dark:bg-[#141414] transition-colors relative">
+      <div className="mb-4 flex items-center gap-2 text-xs uppercase tracking-widest font-semibold text-[#D4AF37]">
+        <History size={16} />
+        Log de Auditoría de Servicios
+      </div>
+
+      <div className="border border-gray-200 dark:border-gray-800 rounded-sm overflow-hidden">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="border-b border-gray-200 dark:border-gray-800 text-[11px] uppercase tracking-widest opacity-60 bg-gray-50 dark:bg-[#1a1a1a]">
+              <th className="p-4">Evento</th>
+              <th className="p-4">Servicio</th>
+              <th className="p-4">Cambios</th>
+              <th className="p-4">Fecha</th>
+              <th className="p-4 text-center">Detalles</th>
+              <th className="p-4 text-center">Acción</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-sm">
+            {loading ? (
+              <tr>
+                <td colSpan="6" className="p-8 text-center text-xs uppercase tracking-widest opacity-40">
+                  Cargando trazabilidad de servicios...
+                </td>
+              </tr>
+            ) : logs.length === 0 ? (
+              <tr>
+                <td colSpan="6" className="p-8 text-center text-xs uppercase tracking-widest opacity-40">
+                  No hay registros de modificaciones aún.
+                </td>
+              </tr>
+            ) : (
+              logs.map((m) => (
+                <tr key={m.id} className="hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
+                  <td className="p-4">
+                    <div
+                      className={`
+                        inline-flex items-center gap-2 px-3 py-1 rounded-full
+                        text-[11px] uppercase tracking-wider font-semibold
+                        ${
+                          m.accion === 'Creado' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 
+                          m.accion === 'Editado' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 
+                          m.accion === 'Revertido' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 
+                          m.accion === 'Estado cambiado' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
+                          'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                        }
+                      `}
+                    >
+                      <span>
+                        {m.accion === 'Creado' ? '🟢' : m.accion === 'Editado' ? '✏️' : m.accion === 'Revertido' ? '↩️' : m.accion === 'Estado cambiado' ? '🔄' : '🗑️'}
+                      </span>
+                      {m.accion}
+                    </div>
+                  </td>
+                  
+                  <td className="p-4 font-medium">{m.nombre_servicio}</td>
+                  
+                  <td className="p-4 text-xs space-y-1">
+                    {m.accion === 'Creado' ? (
+                      <div className="text-emerald-400 font-medium">
+                        Valor Inicial: S/ {Number(m.valores_actuales?.precio || 0).toFixed(2)} ({m.valores_actuales?.duracion || 0} min)
+                      </div>
+                    ) : m.accion === 'Eliminado' ? (
+                      <div className="text-rose-400 opacity-80">
+                        Servicio retirado del catálogo
+                      </div>
+                    ) : (
+                      <>
+                        {/* Render de Precios */}
+                        {(m.valores_anteriores?.precio !== undefined || m.valores_actuales?.precio !== undefined) && (
+                          <div className="flex items-center gap-2">
+                            <span className="opacity-50 w-14">Precio:</span>
+                            {m.accion === 'Editado' || m.accion === 'Revertido' ? (
+                              <>
+                                <span className="text-rose-400">
+                                  S/ {Number(m.valores_anteriores?.precio || 0).toFixed(2)}
+                                </span>
+                                <span className="opacity-40">→</span>
+                                <span className="text-emerald-400 font-semibold">
+                                  S/ {Number(m.valores_actuales?.precio || 0).toFixed(2)}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-emerald-400 font-semibold">
+                                  S/ {Number(m.valores_actuales?.precio || m.valores_anteriores?.precio || 0).toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Render de Duración */}
+                        {(m.valores_anteriores?.duracion !== undefined || m.valores_actuales?.duracion !== undefined) && (
+                          <div className="flex items-center gap-2">
+                            <span className="opacity-50 w-14">Duración:</span>
+                            {m.accion === 'Editado' || m.accion === 'Revertido' ? (
+                              <>
+                                <span className="text-rose-400">
+                                  {m.valores_anteriores?.duracion} min
+                                </span>
+                                <span className="opacity-40">→</span>
+                                <span className="text-emerald-400 font-semibold">
+                                  {m.valores_actuales?.duracion} min
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-emerald-400 font-semibold">
+                                {m.valores_actuales?.duracion || m.valores_anteriores?.duracion || 0} min
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </td>
+                  
+                  <td className="p-4 text-xs opacity-70">{formatFechaLog(m.fecha)}</td>
+                  
+                  <td className="p-4 text-center">
+                    <button 
+                      onClick={() => setSelectedLog(m)}
+                      className="text-gray-400 hover:text-[#D4AF37] transition-colors"
+                      title="Ver todos los campos modificados"
+                    >
+                      <Eye size={16} className="mx-auto" />
+                    </button>
+                  </td>
+
+                  <td className="p-4 text-center">
+                    {m.accion === 'Editado' && (
+                      <button 
+                        onClick={() => handleRevertir(m)}
+                        className="text-xs text-[#D4AF37] font-medium tracking-wide hover:underline inline-flex items-center gap-1"
+                      >
+                        <RotateCcw size={12}/> Revertir
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* MODAL ELEGANTE */}
+      {selectedLog && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#141414] border border-gray-800 p-6 rounded-sm w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-800 pb-3 mb-4">
+              <h3 className="text-xs uppercase tracking-widest font-bold text-[#D4AF37]">
+                Auditoría de Cambios / Servicio
+              </h3>
+              <button 
+                onClick={() => setSelectedLog(null)}
+                className="text-gray-400 hover:text-white"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-gray-300">
+              <p><span className="opacity-50 uppercase tracking-wider block text-[10px]">Servicio:</span> <strong className="text-white text-sm">{selectedLog.nombre_servicio}</strong></p>
+              <p><span className="opacity-50 uppercase tracking-wider block text-[10px]">ID de Base de Datos:</span> <span className="font-mono opacity-80">{selectedLog.servicio_id}</span></p>
+              <p><span className="opacity-50 uppercase tracking-wider block text-[10px]">Operación Realizada:</span> <span className="font-bold text-amber-400">{selectedLog.accion}</span></p>
+              
+              <div className="mt-4 space-y-3">
+                {selectedLog.accion === 'Creado' ? (
+                  <div className="bg-[#1a1a1a] border border-gray-800 rounded-sm p-4 space-y-2">
+                    <div className="text-[10px] uppercase tracking-widest text-emerald-400 font-bold">Datos de Alta</div>
+                    <p><span className="opacity-50">Precio:</span> S/ {Number(selectedLog.valores_actuales?.precio || 0).toFixed(2)}</p>
+                    <p><span className="opacity-50">Duración:</span> {selectedLog.valores_actuales?.duracion || 0} minutos</p>
+                    <p><span className="opacity-50">Descripción:</span> {selectedLog.valores_actuales?.descripcion || 'Sin descripción'}</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Bloque Precio Modificado */}
+                    {(selectedLog.valores_anteriores?.precio !== undefined || selectedLog.valores_actuales?.precio !== undefined) && (
+                      <div className="bg-[#1a1a1a] border border-gray-800 rounded-sm p-4">
+                        <div className="text-[10px] uppercase tracking-widest text-gray-500 mb-2">Cambio de Precio</div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-[9px] text-gray-500 uppercase">Antes</div>
+                            <div className="text-rose-400 text-lg font-semibold">
+                              S/ {Number(selectedLog.valores_anteriores?.precio || 0).toFixed(2)}
+                            </div>
+                          </div>
+                          <div className="text-gray-600 text-xl">→</div>
+                          <div className="text-right">
+                            <div className="text-[9px] text-gray-500 uppercase">Ahora</div>
+                            <div className="text-emerald-400 text-lg font-semibold">
+                              S/ {Number(selectedLog.valores_actuales?.precio || 0).toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Bloque Duración Modificada */}
+                    {(selectedLog.valores_anteriores?.duracion !== undefined || selectedLog.valores_actuales?.duracion !== undefined) && (
+                      <div className="bg-[#1a1a1a] border border-gray-800 rounded-sm p-4">
+                        <div className="text-[10px] uppercase tracking-widest text-gray-500 mb-2">Cambio de Duración</div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-[9px] text-gray-500 uppercase">Antes</div>
+                            <div className="text-rose-400 text-lg font-semibold">
+                              {selectedLog.valores_anteriores?.duracion || 0} min
+                            </div>
+                          </div>
+                          <div className="text-gray-600 text-xl">→</div>
+                          <div className="text-right">
+                            <div className="text-[9px] text-gray-500 uppercase">Ahora</div>
+                            <div className="text-emerald-400 text-lg font-semibold">
+                              {selectedLog.valores_actuales?.duracion || 0} min
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

@@ -68,7 +68,7 @@ export default function HistoryProductos() {
         await supabase.from('historial_productos').insert({
           producto_id: log.producto_id,
           nombre_producto: log.nombre_producto,
-          accion: 'Editado',
+          accion: 'Revertido',
           valores_anteriores: log.valores_actuales,
           valores_actuales: log.valores_anteriores
         });
@@ -126,20 +126,24 @@ export default function HistoryProductos() {
                         inline-flex items-center gap-2 px-3 py-1 rounded-full
                         text-[11px] uppercase tracking-wider font-semibold
                         ${
-                          m.accion === 'Creado'
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                            : m.accion === 'Editado'
-                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                            : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                        }
+  m.accion === 'Creado'
+    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+    : m.accion === 'Editado'
+    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+    : m.accion === 'Revertido'
+    ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+    : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+}
                       `}
                     >
                       <span>
                         {m.accion === 'Creado'
-                          ? '🟢'
-                          : m.accion === 'Editado'
-                          ? '✏️'
-                          : '🗑️'}
+  ? '🟢'
+  : m.accion === 'Editado'
+  ? '✏️'
+  : m.accion === 'Revertido'
+  ? '↩️'
+  : '🗑️'}
                       </span>
                       {m.accion}
                     </div>
@@ -214,7 +218,7 @@ export default function HistoryProductos() {
                  {/* Acción Sincronizada / Revertir */}
 <td className="p-4 text-center">
   {/* Modificado para que SÓLO aparezca si fue Editado */}
-  {m.accion === 'Editado' && (
+  {(m.accion === 'Editado') && (
     <button 
       onClick={() => handleRevertir(m)}
       className="text-xs text-[#D4AF37] font-medium tracking-wide hover:underline inline-flex items-center gap-1"
