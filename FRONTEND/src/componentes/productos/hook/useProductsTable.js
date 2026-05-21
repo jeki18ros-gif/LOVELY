@@ -230,12 +230,6 @@ const closeModal = () => {
     );
   };
 
-/* =========================
-    ELIMINAR PRODUCTO (Y GUARDAR HISTORIAL)
-   ========================= */
-/* =========================
-    ELIMINAR PRODUCTO (El historial ahora se guarda vía Trigger SQL)
-   ========================= */
 const handleDelete = async (id) => {
   try {
     // 1. Verificar si existe localmente
@@ -299,11 +293,15 @@ const handleDelete = async (id) => {
         return;
       }
 
-      const { data } = supabase.storage
-        .from('productos')
-        .getPublicUrl(`productos/${fileName}`);
-
-      imagen_url = data.publicUrl;
+const { data } = supabase.storage
+  .from('servicios')
+  .getPublicUrl(`servicios/${fileName}`, {
+    transform: {
+      width: 500,  
+      quality: 80, 
+      format: 'origin', 
+    },
+  });
     }
 
     const datosActualizados = {
