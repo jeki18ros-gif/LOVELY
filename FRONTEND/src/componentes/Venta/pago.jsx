@@ -154,7 +154,18 @@ const PaymentModule = ({
         .insert(detallesParaBD);
 
       if (detalleError) throw detalleError;
+if (ventaActiva.productos.length > 0) {
+        // Mapeamos solo el ID y la cantidad elegida para pasárselo a la BD
+        const productosParaStock = ventaActiva.productos.map(p => ({
+          id: p.id,
+          cantidad: p.cantidad
+        }));
 
+        const { error: stockError } = await supabase
+          .rpc('restar_stock_venda', { productos_json: productosParaStock });
+
+        if (stockError) throw stockError;
+      }
       // 3. Armar e Insertar Pagos
       let pagos = [];
       if (metodo === 'mixto') {
