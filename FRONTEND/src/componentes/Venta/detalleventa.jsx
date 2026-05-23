@@ -1,4 +1,3 @@
-// SaleDetail.jsx
 import React from 'react';
 import { ScrollText, Trash2, Sparkles, X } from 'lucide-react';
 
@@ -22,9 +21,19 @@ const SaleDetail = ({
 
   const cambiarCantidad = (id, tipo, cantidad) => {
     if (cantidad < 1) return;
+
     if (tipo === 'Producto') {
+      // 1. Buscamos el producto para conocer su stock límite
+      const prodOriginal = productos.find(p => p.id === id);
+      
+      // Si el producto existe y la cantidad ingresada supera su stock, lo limitamos al máximo permitido
+      if (prodOriginal && cantidad > prodOriginal.stock) {
+        cantidad = prodOriginal.stock;
+      }
+
       setProductos(productos.map(p => p.id === id ? { ...p, cantidad } : p));
     } else {
+      // Los servicios no manejan stock físico, por lo que no llevan límite superior
       setServicios(servicios.map(s => s.id === id ? { ...s, cantidad } : s));
     }
   };
@@ -82,6 +91,8 @@ const SaleDetail = ({
           <tbody className="divide-y divide-gray-50 dark:divide-zinc-800/50">
             {items.map(item => {
               const totalItem = Number(item.precio) * item.cantidad;
+              const esProducto = item.tipo === 'Producto';
+
               return (
                 <tr key={`${item.tipo}-${item.id}`} className="group hover:bg-gray-50/50 dark:hover:bg-zinc-900/30 transition-colors">
                   <td className="py-4">
@@ -97,13 +108,23 @@ const SaleDetail = ({
                   </td>
                   <td className="py-4 text-gray-600 dark:text-gray-400">S/ {item.precio}</td>
                   <td className="py-4">
-                    <input
-                      type="number"
-                      min="1"
-                      value={item.cantidad}
-                      onChange={(e) => cambiarCantidad(item.id, item.tipo, Number(e.target.value))}
-                      className="w-16 px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-transparent focus:border-amber-500 outline-none transition-all"
-                    />
+                    <div className="flex flex-col items-start gap-1">
+                      <input
+                        type="number"
+                        min="1"
+                        // 2. Pasamos dinámicamente el valor máximo si corresponde a un producto física
+                        max={esProducto ? item.stock : undefined}
+                        value={item.cantidad}
+                        onChange={(e) => cambiarCantidad(item.id, item.tipo, Number(e.target.value))}
+                        className="w-16 px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-transparent focus:border-amber-500 outline-none transition-all text-sm font-medium"
+                      />
+                      {/* 3. Recordatorio visual de stock máximo debajo del input */}
+                      {esProducto && (
+                        <span className="text-[10px] text-gray-400 dark:text-zinc-500 whitespace-nowrap">
+                          Máx: {item.stock}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="py-4 font-semibold text-gray-800 dark:text-gray-200">S/ {totalItem.toFixed(2)}</td>
                   <td className="py-4">

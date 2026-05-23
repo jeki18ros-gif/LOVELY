@@ -35,16 +35,15 @@ const ServiceList = ({
 
   // Obtener categorías reales
   useEffect(() => {
-
     const obtenerCategorias =
       async () => {
 
-     const { data, error } =
-           await supabase
-             .from('categorias')
-             .select('*')
-             .eq('tipo', 'servicio')
-             .order('nombre');
+      const { data, error } =
+        await supabase
+          .from('categorias')
+          .select('*')
+          .eq('tipo', 'servicio')
+          .order('nombre');
 
       if (error) {
         console.error(error);
@@ -55,12 +54,10 @@ const ServiceList = ({
     };
 
     obtenerCategorias();
-
   }, []);
 
   // Obtener servicios reales
   useEffect(() => {
-
     const obtenerServicios =
       async () => {
 
@@ -73,11 +70,11 @@ const ServiceList = ({
               id,
               nombre
             )
-          `);
+          `)
+          .eq('estado', true); // <--- CORRECCIÓN AQUÍ: Solo trae servicios activos
 
       // Buscar
       if (busqueda.trim()) {
-
         query =
           query.ilike(
             'nombre',
@@ -87,7 +84,6 @@ const ServiceList = ({
 
       // Filtrar categoría
       if (categoriaSeleccionada) {
-
         query =
           query.eq(
             'categoria_id',
@@ -109,86 +105,50 @@ const ServiceList = ({
     };
 
     obtenerServicios();
-
   }, [
     busqueda,
     categoriaSeleccionada
   ]);
 
   return (
-<div
-  className="
-    max-w-md
-    h-[500px]
-    flex
-    flex-col
-    p-6
-    rounded-xl
-    bg-white
-    dark:bg-[#121212]
-    text-gray-800
-    dark:text-white
-    shadow-xl
-    border
-    border-gray-200
-    dark:border-zinc-800
-  "
->
-
+    <div
+      className="
+        max-w-md
+        h-[500px]
+        flex
+        flex-col
+        p-6
+        rounded-xl
+        bg-white
+        dark:bg-[#121212]
+        text-gray-800
+        dark:text-white
+        shadow-xl
+        border
+        border-gray-200
+        dark:border-zinc-800
+      "
+    >
       {/* HEADER */}
-      <div
-        className="
-          flex
-          items-center
-          gap-2
-          mb-6
-        "
-      >
-
+      <div className="flex items-center gap-2 mb-6">
         <Scissors
-          className="
-            text-purple-400
-            dark:text-purple-500
-          "
+          className="text-purple-400 dark:text-purple-500"
           size={20}
         />
-
-        <h2
-          className="
-            text-sm
-            font-bold
-            tracking-widest
-            uppercase
-          "
-        >
+        <h2 className="text-sm font-bold tracking-widest uppercase">
           Servicios
         </h2>
-
       </div>
 
       {/* BUSCADOR + FILTRO */}
-      <div
-        className="
-          flex
-          gap-2
-          mb-6
-        "
-      >
-
+      <div className="flex gap-2 mb-6">
         {/* INPUT */}
         <div className="flex-grow">
-
           <input
             type="text"
             value={busqueda}
-            onChange={(e) =>
-              setBusqueda(
-                e.target.value
-              )
-            }
-            placeholder="
-              Buscar servicios...
-            "
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar servicios..."
             className="
               w-full
               bg-gray-100
@@ -203,19 +163,13 @@ const ServiceList = ({
               focus:ring-amber-500
             "
           />
-
         </div>
 
         {/* SELECT */}
         <div className="relative">
-
           <select
             value={categoriaSeleccionada}
-            onChange={(e) =>
-              setCategoriaSeleccionada(
-                e.target.value
-              )
-            }
+            onChange={(e) => setCategoriaSeleccionada(e.target.value)}
             className="
               appearance-none
               bg-gray-100
@@ -229,24 +183,13 @@ const ServiceList = ({
               cursor-pointer
             "
           >
-
-            <option value="">
-              Todas
-            </option>
-
-            {
-              categorias.map(cat => (
-                <option
-                  key={cat.id}
-                  value={cat.id}
-                >
-                  {cat.nombre}
-                </option>
-              ))
-            }
-
+            <option value="">Todas</option>
+            {categorias.map(cat => (
+              <option key={cat.id} value={cat.id}>
+                {cat.nombre}
+              </option>
+            ))}
           </select>
-
           <ChevronDown
             size={14}
             className="
@@ -258,162 +201,66 @@ const ServiceList = ({
               text-gray-500
             "
           />
-
         </div>
-
       </div>
 
       {/* LISTA */}
-     <div
-  className="
-    flex-1
-    overflow-y-auto
-    pr-1
-    space-y-5
-  "
->
-
-        {
-          servicios.map(serv => (
-
-            <div
-              key={serv.id}
-              className="
-                flex
-                items-center
-                justify-between
-              "
-            >
-
-              {/* IZQUIERDA */}
-              <div
-                className="
-                  flex
-                  items-center
-                  gap-3
-                "
-              >
-
-                <div
-                  className="
-                    w-10
-                    h-10
-                    rounded-full
-                    bg-purple-600
-                    flex
-                    items-center
-                    justify-center
-                    text-white
-                  "
-                >
-                  <Sparkles size={18}/>
-                </div>
-
-                <div
-                  className="
-                    flex
-                    flex-col
-                  "
-                >
-
-                  <span
-                    className="
-                      text-sm
-                      font-medium
-                    "
-                  >
-                    {serv.nombre}
-                  </span>
-
-                  <span
-                    className="
-                      text-xs
-                      text-gray-500
-                    "
-                  >
-                    {serv.duracion} min
-                  </span>
-
-                </div>
-
+      <div className="flex-1 overflow-y-auto pr-1 space-y-5">
+        {servicios.map(serv => (
+          <div key={serv.id} className="flex items-center justify-between">
+            {/* IZQUIERDA */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white">
+                <Sparkles size={18}/>
               </div>
-
-              {/* DERECHA */}
-              <div
-                className="
-                  flex
-                  items-center
-                  gap-4
-                "
-              >
-
-                <span
-                  className="
-                    text-sm
-                    font-semibold
-                  "
-                >
-                  S/ {serv.precio}
-                </span>
-
-                {/* CHECK */}
-               <input
-  type="checkbox"
-  checked={
-    serviciosSeleccionados.some(
-      s => s.id === serv.id
-    )
-  }
- // ... dentro del map de servicios en el checkbox
-onChange={(e) => {
-  if (e.target.checked) {
-    const existe = serviciosSeleccionados.some(s => s.id === serv.id);
-    if (!existe) {
-      setServiciosSeleccionados([
-        ...serviciosSeleccionados,
-        { ...serv, tipo: 'Servicio', cantidad: 1 }
-      ]);
-    }
-  } else {
-    setServiciosSeleccionados(
-      serviciosSeleccionados.filter(s => s.id !== serv.id)
-    );
-  }
-}}
-  className="
-    w-5
-    h-5
-    rounded
-    text-amber-500
-    focus:ring-amber-500
-    cursor-pointer
-  "
-/>
-
+              <div className="flex flex-col">
+                <span className="text-sm font-medium">{serv.nombre}</span>
+                <span className="text-xs text-gray-500">{serv.duracion} min</span>
               </div>
-
             </div>
-          ))
-        }
+
+            {/* DERECHA */}
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-semibold">S/ {serv.precio}</span>
+              {/* CHECK */}
+              <input
+                type="checkbox"
+                checked={serviciosSeleccionados.some(s => s.id === serv.id)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    const existe = serviciosSeleccionados.some(s => s.id === serv.id);
+                    if (!existe) {
+                      setServiciosSeleccionados([
+                        ...serviciosSeleccionados,
+                        { ...serv, tipo: 'Servicio', cantidad: 1 }
+                      ]);
+                    }
+                  } else {
+                    setServiciosSeleccionados(
+                      serviciosSeleccionados.filter(s => s.id !== serv.id)
+                    );
+                  }
+                }}
+                className="
+                  w-5
+                  h-5
+                  rounded
+                  text-amber-500
+                  focus:ring-amber-500
+                  cursor-pointer
+                "
+              />
+            </div>
+          </div>
+        ))}
 
         {/* VACÍO */}
-        {
-          servicios.length === 0 && (
-            <div
-              className="
-                py-10
-                text-center
-                text-sm
-                text-gray-500
-              "
-            >
-              No se encontraron servicios
-            </div>
-          )
-        }
-
+        {servicios.length === 0 && (
+          <div className="py-10 text-center text-sm text-gray-500">
+            No se encontraron servicios activos
+          </div>
+        )}
       </div>
-
     </div>
   );
 };
