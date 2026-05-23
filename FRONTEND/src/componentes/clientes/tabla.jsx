@@ -132,11 +132,6 @@ const ClienteTable = ({
           </table>
         </div>
       </div>
-
-      {/* === MODALES EXTRAÍDOS ===
-        Al renderizarlos aquí, totalmente fuera del div con overflow-hidden, 
-        el navegador les otorga la capa fixed sobre toda la pantalla sin restricciones físicas.
-      */}
       <FormularioVer 
         isOpen={modalType === 'ver'} 
         onClose={cerrarModal} 

@@ -206,7 +206,6 @@ backdrop-blur-xl
 rounded-[30px]
 border border-amber-500/20
 shadow-[0_10px_40px_rgba(251,191,36,0.08)]
-overflow-hidden
 transition-all duration-300
 ">
           <div className="overflow-x-auto">
