@@ -8,8 +8,8 @@ import {
   AlertTriangle
 } from 'lucide-react';
 
-import FormularioVer from './formularios/FormularioVer';
-import FormularioEditar from './formularios/FormularioEditar';
+import FormularioVer from './formularios/formularioVer';
+import FormularioEditar from './formularios/formularioEditar';
 import useProductsTable from './hook/useProductsTable';
 
 const ProductTable = ({
