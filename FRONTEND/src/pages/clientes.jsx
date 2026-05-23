@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
-import ClientesHeader from '../componentes/Clientes/header';
-import FilterBar from '../componentes/Clientes/filtros';
-import ClientesTable from '../componentes/Clientes/tabla';
-import FormularioCliente from '../componentes/Clientes/formularios/formulariocliente';
+import ClientesHeader from '../componentes/clientes/header';
+import FilterBar from '../componentes/clientes/filtros';
+import ClientesTable from '../componentes/clientes/tabla';
+import FormularioCliente from '../componentes/clientes/formularios/formulariocliente';
 
 const Clientes = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);

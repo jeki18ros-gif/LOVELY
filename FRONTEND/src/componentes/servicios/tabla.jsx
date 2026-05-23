@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pencil, Trash2, Eye, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
-import FormularioVer from './formularios/FormularioVer';
-import FormularioEditar from './formularios/FormularioEditar';
+import FormularioVer from './formularios/formularioVer';
+import FormularioEditar from './formularios/formularioEditar';
 import useServicesTable from './hook/useServicesTable';
 
 const ServiceTable = ({ filters, categoriaSeleccionada, refresh, categorias }) => {
