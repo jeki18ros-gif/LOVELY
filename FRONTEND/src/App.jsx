@@ -7,9 +7,7 @@ import Servicios from "./pages/servicios";
 import Productos from "./pages/productos";
 import Clientes from "./pages/clientes";
 import Citas from "./pages/citas";
-import Ingresos from "./pages/Finanzas/ingresos";
-import Egresos from "./pages/Finanzas/egresos";
-import CierreCaja from "./pages/Finanzas/cierreCaja";
+import FinanzasGeneral from "./pages/finanzas";
 import HistoryGeneral from "./pages/historial";
 import { motion } from "framer-motion";
 
@@ -37,10 +35,8 @@ export default function App() {
             <Route path="/productos" element={<Productos />} />
             <Route path="/clientes" element={<Clientes />} />
             <Route path="/citas" element={<Citas />} />
-            <Route path="/finanzas/ingresos" element={<Ingresos />} />
-            <Route path="/finanzas/egresos" element={<Egresos />} />
-            <Route path="/finanzas/cierre" element={<CierreCaja />} />
-            <Route path="historial" element={<HistoryGeneral/>}/>
+            <Route path="/finanzas" element={<FinanzasGeneral/>} />
+            <Route path="/historial" element={<HistoryGeneral/>}/>
           </Routes>
         </motion.div>
       </div>

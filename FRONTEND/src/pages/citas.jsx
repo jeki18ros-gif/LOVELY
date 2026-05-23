@@ -6,9 +6,10 @@ import FormularioCita from '../componentes/citas/formulario/formularioCita';
 
 const Citas = () => {
   const [openDetalle, setOpenDetalle] = useState(false);
-  const [isFormOpen, setIsFormOpen] = useState(false); // Estado para el formulario
+  const [isFormOpen, setIsFormOpen] = useState(false); 
   const [citaSeleccionada, setCitaSeleccionada] = useState(null);
-const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
+
   const handleOpen = (cita) => {
     setCitaSeleccionada(cita);
     setOpenDetalle(true);
@@ -18,36 +19,46 @@ const [refreshKey, setRefreshKey] = useState(0);
     setOpenDetalle(false);
   };
 
-  const handleSaveCita = (nuevaCita) => {
-    console.log("Cita registrada:", nuevaCita);
-    // Aquí podrías actualizar tu lista de citas en la agenda
-    setIsFormOpen(false);
-  };
-  const actualizarDatosTabla = (citaActualizada) => {
-
-  setCitaSeleccionada(citaActualizada);
+const handleSaveCita = (nuevaCita) => {
+  console.log("Cita registrada:", nuevaCita);
 
   setRefreshKey(prev => prev + 1);
+
+  setIsFormOpen(false);
 };
+
+  const actualizarDatosTabla = (citaActualizada) => {
+    setCitaSeleccionada(citaActualizada);
+    setRefreshKey(prev => prev + 1);
+  };
+
 const eliminarCita = async (id) => {
-  console.log(id);
+  try {
+
+    setOpenDetalle(false);
+
+    setRefreshKey(prev => prev + 1);
+
+  } catch (error) {
+    console.error(error);
+  }
 };
   return (
     <div className="min-h-screen p-6 bg-gray-50 dark:bg-[#0a0a0a] text-gray-800 dark:text-white transition-colors duration-300">
-      
       <div className="max-w-[1400px] mx-auto flex gap-6 items-stretch">
         <main className="flex-1 flex">
           <div className="w-full flex flex-col gap-6 p-6 rounded-xl shadow-xl
                           bg-white dark:bg-[#111111]
                           border border-gray-200 dark:border-gray-800">
 
-            {/* Pasamos la función para abrir el formulario */}
             <CitasHeader onOpenForm={() => setIsFormOpen(true)} />
 
             <div className="flex-1 flex flex-col">
-              <Agenda onSelectCita={handleOpen}
-               onUpdate={actualizarDatosTabla}
-              refreshKey={refreshKey} />
+              <Agenda 
+                onSelectCita={handleOpen}
+                onUpdate={actualizarDatosTabla}
+                refreshKey={refreshKey} 
+              />
             </div>
           </div>
         </main>

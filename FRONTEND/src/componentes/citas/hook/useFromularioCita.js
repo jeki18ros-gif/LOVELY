@@ -58,10 +58,11 @@ export const useFormularioCita = (isOpen, onClose) => {
   };
 
   const obtenerHorasOcupadas = async () => {
-    const { data, error } = await supabase
-      .from("citas")
-      .select("hora_inicio, duracion_minutos")
-      .eq("fecha", formData.fecha);
+const { data, error } = await supabase
+  .from("citas")
+  .select("hora_inicio, duracion_minutos")
+  .eq("fecha", formData.fecha)
+  .neq("estado", "Cancelada");
 
     if (error) return;
 

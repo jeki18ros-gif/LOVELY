@@ -21,15 +21,7 @@ const menuItems = [
   { name: "Productos", icon: Package, path: "/productos" },
   { name: "Clientes", icon: Users, path: "/clientes" },
   { name: "Citas", icon: Calendar, path: "/citas" },
-  {
-    name: "Finanzas",
-    icon: DollarSign,
-    children: [
-      { name: "Ingresos", path: "/finanzas/ingresos" },
-      { name: "Egresos", path: "/finanzas/egresos" },
-      { name: "Cierre de caja", path: "/finanzas/cierre" },
-    ],
-  },
+  { name: "Finanzas", icon: DollarSign, path: "/finanzas" },
   { name: "Historial", icon: History, path: "/historial" },
 ];
 

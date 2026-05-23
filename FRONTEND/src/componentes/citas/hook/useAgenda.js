@@ -64,10 +64,41 @@ export const useAgenda = (refreshKey) => {
     setAppointments(citasFormateadas);
   };
 
-  useEffect(() => {
-    obtenerCitas();
-  }, [refreshKey]);
+// carga inicial
+useEffect(() => {
+  obtenerCitas();
+}, []);
 
+// refresh manual
+useEffect(() => {
+  obtenerCitas();
+}, [refreshKey]);
+
+// realtime
+useEffect(() => {
+
+  const channel = supabase
+    .channel('citas-realtime')
+
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'citas'
+      },
+      () => {
+        obtenerCitas();
+      }
+    )
+
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+
+}, []);
   const days = useMemo(() => {
     const start = new Date(currentWeek);
     const day = start.getDay();
@@ -86,7 +117,14 @@ export const useAgenda = (refreshKey) => {
   }, [currentWeek]);
 
 const visibleAppointments = useMemo(() => {
+
   return appointments.filter(app => {
+
+    // OCULTAR CANCELADAS
+    if (app.status === 'Cancelada') {
+      return false;
+    }
+
     return days.some(day => {
 
       const dayString =
@@ -98,6 +136,7 @@ const visibleAppointments = useMemo(() => {
       return dayString === appString;
     });
   });
+
 }, [appointments, days]);
 
   const hours = useMemo(() => {

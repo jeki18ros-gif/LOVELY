@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RotateCcw, Eye, X, History } from 'lucide-react';
+import { RotateCcw, Eye, X, History, CheckCircle2, AlertCircle } from 'lucide-react';
 import { supabase } from "../../../lib/supabase";
 
 export default function HistoryProductos() {
@@ -8,6 +8,23 @@ export default function HistoryProductos() {
   
   // Estado para controlar el modal "Ver más"
   const [selectedLog, setSelectedLog] = useState(null);
+
+  // Estado para el sistema de notificaciones flotantes (Toasts)
+  const [notificacion, setNotificacion] = useState({ visible: false, mensaje: '', tipo: 'info' });
+
+  const mostrarToast = (mensaje, tipo = 'info') => {
+    setNotificacion({ visible: true, mensaje, tipo });
+  };
+
+  // Auto-cerrar la notificación después de 4 segundos
+  useEffect(() => {
+    if (notificacion.visible) {
+      const timer = setTimeout(() => {
+        setNotificacion(prev => ({ ...prev, visible: false }));
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [notificacion.visible]);
 
   // Cargar el historial desde Supabase
   const fetchHistorial = async () => {
@@ -18,15 +35,12 @@ export default function HistoryProductos() {
         .select('*')
         .order('fecha', { ascending: false });
 
-      if (error) {
-        alert("Error de Supabase: " + error.message);
-        throw error;
-      }
+      if (error) throw error;
       
-      console.log("Datos recibidos de Supabase:", data);
       setLogs(data || []);
     } catch (error) {
       console.error("Error cargando historial de productos:", error);
+      mostrarToast("Error al conectar con la base de datos de auditoría", "error");
     } finally {
       setLoading(false);
     }
@@ -73,17 +87,36 @@ export default function HistoryProductos() {
           valores_actuales: log.valores_anteriores
         });
 
-        alert('¡Cambio revertido con éxito!');
+        mostrarToast(`¡Cambios en "${log.nombre_producto}" revertidos con éxito!`, "success");
         fetchHistorial(); // Recargar tabla
       }
     } catch (error) {
       console.error("Error al revertir:", error);
-      alert("No se pudo revertir: " + error.message);
+      mostrarToast(`No se pudo revertir el cambio: ${error.message}`, "error");
     }
   };
 
   return (
     <div className="p-6 bg-white dark:bg-[#141414] transition-colors relative">
+      
+      {/* NOTIFICACIÓN FLOTANTE (TOAST) */}
+      {notificacion.visible && (
+        <div className={`fixed bottom-5 right-5 z-[60] flex items-center gap-3 p-4 rounded-2xl shadow-2xl border backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 duration-300 ${
+          notificacion.tipo === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500' :
+          notificacion.tipo === 'warning' ? 'bg-yellow-600/10 border-yellow-600/30 text-yellow-600 dark:text-yellow-400' :
+          'bg-red-500/10 border-red-500/30 text-red-500'
+        }`}>
+          {notificacion.tipo === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+          <p className="text-sm font-medium">{notificacion.mensaje}</p>
+          <button 
+            type="button"
+            onClick={() => setNotificacion(prev => ({ ...prev, visible: false }))} 
+            className="ml-2 p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
       
       <div className="mb-4 flex items-center gap-2 text-xs uppercase tracking-widest font-semibold text-[#D4AF37]">
         <History size={16} />
@@ -126,24 +159,24 @@ export default function HistoryProductos() {
                         inline-flex items-center gap-2 px-3 py-1 rounded-full
                         text-[11px] uppercase tracking-wider font-semibold
                         ${
-  m.accion === 'Creado'
-    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-    : m.accion === 'Editado'
-    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-    : m.accion === 'Revertido'
-    ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-    : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-}
+                          m.accion === 'Creado'
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            : m.accion === 'Editado'
+                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            : m.accion === 'Revertido'
+                            ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                            : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                        }
                       `}
                     >
                       <span>
                         {m.accion === 'Creado'
-  ? '🟢'
-  : m.accion === 'Editado'
-  ? '✏️'
-  : m.accion === 'Revertido'
-  ? '↩️'
-  : '🗑️'}
+                          ? '🟢'
+                          : m.accion === 'Editado'
+                          ? '✏️'
+                          : m.accion === 'Revertido'
+                          ? '↩️'
+                          : '🗑️'}
                       </span>
                       {m.accion}
                     </div>
@@ -215,18 +248,17 @@ export default function HistoryProductos() {
                     </button>
                   </td>
 
-                 {/* Acción Sincronizada / Revertir */}
-<td className="p-4 text-center">
-  {/* Modificado para que SÓLO aparezca si fue Editado */}
-  {(m.accion === 'Editado') && (
-    <button 
-      onClick={() => handleRevertir(m)}
-      className="text-xs text-[#D4AF37] font-medium tracking-wide hover:underline inline-flex items-center gap-1"
-    >
-      <RotateCcw size={12}/> Revertir
-    </button>
-  )}
-</td>
+                  {/* Acción Sincronizada / Revertir */}
+                  <td className="p-4 text-center">
+                    {(m.accion === 'Editado') && (
+                      <button 
+                        onClick={() => handleRevertir(m)}
+                        className="text-xs text-[#D4AF37] font-medium tracking-wide hover:underline inline-flex items-center gap-1"
+                      >
+                        <RotateCcw size={12}/> Revertir
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))
             )}
@@ -259,7 +291,7 @@ export default function HistoryProductos() {
               <div className="mt-4 space-y-3">
                 {/* PRECIO */}
                 {(selectedLog.valores_anteriores?.precio !== undefined || selectedLog.valores_actuales?.precio !== undefined) && (
-                  <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-4">
+                  <div className="bg-[#1a1a1a] border border-gray-800 rounded-sm p-4">
                     <div className="text-[11px] uppercase tracking-widest text-gray-500 mb-2">
                       Cambio de Precio
                     </div>
@@ -283,7 +315,7 @@ export default function HistoryProductos() {
 
                 {/* STOCK */}
                 {(selectedLog.valores_anteriores?.stock !== undefined || selectedLog.valores_actuales?.stock !== undefined) && (
-                  <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-4">
+                  <div className="bg-[#1a1a1a] border border-gray-800 rounded-sm p-4">
                     <div className="text-[11px] uppercase tracking-widest text-gray-500 mb-2">
                       Cambio de Stock
                     </div>

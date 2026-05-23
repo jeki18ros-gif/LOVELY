@@ -3,12 +3,13 @@ import { Pencil, Trash2, Eye, AlertTriangle } from 'lucide-react';
 import FormularioVer from "./formularios/formularioVer";
 import FormularioEditar from "./formularios/formularioEditar";
 
+// Colores de frecuencia adaptados para mantener coherencia con el ecosistema dorado/premium
 const getFrecuenciaColor = (frecuencia) => {
   switch (frecuencia) {
-    case 'Frecuente': return 'bg-green-500/20 text-green-600 dark:bg-green-900/30 dark:text-green-400';
-    case 'Regular': return 'bg-yellow-500/20 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400';
-    case 'Nuevo': return 'bg-blue-500/20 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400';
-    default: return 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300';
+    case 'Frecuente': return 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30';
+    case 'Regular': return 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-500/20';
+    case 'Nuevo': return 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border border-transparent';
+    default: return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300';
   }
 };
 
@@ -18,11 +19,9 @@ const ClienteTable = ({
   setListaClientes,
   actualizarCliente 
 }) => {
-  // ESTADOS
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
-  const [modalType, setModalType] = useState(null); // 'ver', 'editar', 'borrar'
+  const [modalType, setModalType] = useState(null);
 
-  // FUNCIONES DE ACCIÓN
   const cerrarModal = () => {
     setModalType(null);
     setClienteSeleccionado(null);
@@ -32,33 +31,32 @@ const ClienteTable = ({
     setClienteSeleccionado(cliente);
     setModalType(tipo);
   };
-const eliminarCliente = async (id) => {
-  const { error } = await supabase
-    .from('clientes')
-    .delete()
-    .eq('id', id);
 
-  if (error) {
-    console.error('Error eliminando:', error);
-    alert('Error al eliminar cliente');
-    return;
-  }
+  const eliminarCliente = async (id) => {
+    // Nota: Asegúrate de que 'supabase' esté importado o disponible en este scope si usas este método
+    const { error } = await supabase
+      .from('clientes')
+      .delete()
+      .eq('id', id);
 
-  setListaClientes(prev => prev.filter(c => c.id !== id));
-  cerrarModal();
-};
-// --- LÓGICA DE FILTRADO ---
+    if (error) {
+      console.error('Error eliminando:', error);
+      alert('Error al eliminar cliente');
+      return;
+    }
+
+    setListaClientes(prev => prev.filter(c => c.id !== id));
+    cerrarModal();
+  };
+
   const clientesFiltrados = useMemo(() => {
     return listaClientes.filter(cliente => {
-      // 1. Filtro de Búsqueda (Nombre o Teléfono)
       const matchesSearch = 
         cliente.nombre.toLowerCase().includes(filters.search.toLowerCase()) ||
         (cliente.telefono || '').includes(filters.search);
 
-      // 2. Filtro de Frecuencia
       const matchesFrecuencia = filters.frecuencia === '' || cliente.frecuencia === filters.frecuencia;
 
-      // 3. Filtro de Visitas
       let matchesVisitas = true;
       if (filters.visitas === '0-5') matchesVisitas = cliente.visitas <= 5;
       else if (filters.visitas === '5-15') matchesVisitas = cliente.visitas > 5 && cliente.visitas <= 15;
@@ -68,104 +66,126 @@ const eliminarCliente = async (id) => {
       return matchesSearch && matchesFrecuencia && matchesVisitas;
     });
   }, [filters, listaClientes]);
+
   return (
     <div className="w-full text-gray-800 dark:text-gray-300 font-sans">
-      <div className="w-full overflow-hidden rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-[#111111] shadow-xl">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="text-gray-500 dark:text-gray-400 text-sm border-b border-gray-200 dark:border-gray-800">
-              <th className="px-6 py-4">Nombre</th>
-              <th className="px-6 py-4 text-center">Teléfono</th>
-              <th className="px-6 py-4 text-center">Frecuencia</th>
-              <th className="px-6 py-4 text-center">Visitas</th>
-              <th className="px-6 py-4 text-center">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-            {clientesFiltrados.map((cliente) => (
-              <tr key={cliente.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.03] transition">
-                <td className="px-6 py-4 text-sm font-medium">{cliente.nombre}</td>
-                <td className="px-6 py-4 text-sm text-center">{cliente.telefono}</td>
-                <td className="px-6 py-4 text-center">
-                  <span className={`px-3 py-1 rounded text-xs font-medium ${getFrecuenciaColor(cliente.frecuencia)}`}>
-                    {cliente.frecuencia}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-sm text-center">{cliente.visitas}</td>
-                <td className="px-6 py-4 text-center">
-                  <div className="flex justify-center gap-2">
-                    {/* BOTÓN VER */}
-                    <button 
-                      onClick={() => abrirModal('ver', cliente)}
-                      className="p-2 border border-blue-500/30 rounded text-blue-500 hover:bg-blue-500 hover:text-white transition">
-                      <Eye size={16} />
-                    </button>
-
-                    {/* BOTÓN EDITAR */}
-                    <button 
-                      onClick={() => abrirModal('editar', cliente)}
-                      className="p-2 border border-yellow-500/30 rounded text-yellow-500 hover:bg-yellow-500 hover:text-white transition">
-                      <Pencil size={16} />
-                    </button>
-
-                    {/* BOTÓN BORRAR */}
-                    <button 
-                      onClick={() => abrirModal('borrar', cliente)}
-                      className="p-2 border border-red-500/30 rounded text-red-500 hover:bg-red-500 hover:text-white transition">
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </td>
+      {/* CONTENEDOR PRINCIPAL: Bordes redondeados de diseño 3xl y sombras premium */}
+      <div className="w-full overflow-hidden rounded-b-3xl border-x border-b border-amber-500/20 bg-white dark:bg-[#0b0b0b] shadow-2xl">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              {/* HEADER DE TABLA DORADO SEMITRANSPARENTE */}
+              <tr className="
+text-amber-700 dark:text-amber-300
+text-xs uppercase tracking-[0.18em]
+border-b border-amber-500/20
+bg-gradient-to-r
+from-amber-500/10
+via-yellow-400/5
+to-amber-500/10
+backdrop-blur-xl
+">
+                <th className="px-6 py-4 font-bold">Nombre</th>
+                <th className="px-6 py-4 text-center font-bold">Teléfono</th>
+                <th className="px-6 py-4 text-center font-bold">Frecuencia</th>
+                <th className="px-6 py-4 text-center font-bold">Visitas</th>
+                <th className="px-6 py-4 text-center font-bold">Acciones</th>
               </tr>
-            ))}
-            {/* Mensaje si no hay resultados */}
-            {clientesFiltrados.length === 0 && (
-              <tr>
-                <td colSpan="5" className="px-6 py-10 text-center text-gray-500 italic">
-                  No se encontraron clientes.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-amber-500/10">
+              {clientesFiltrados.map((cliente) => (
+                <tr 
+                  key={cliente.id} 
+                  className="
+hover:bg-gradient-to-r
+hover:from-amber-500/10
+hover:to-yellow-500/5
+transition-all duration-300
+group
+"
+                >
+                  <td className="px-6 py-4 text-sm font-semibold text-black dark:text-gray-100">{cliente.nombre}</td>
+                  <td className="px-6 py-4 text-sm text-center font-medium font-mono">{cliente.telefono || '---'}</td>
+                  <td className="px-6 py-4 text-center">
+                    <span className={`px-3 py-1 rounded-xl text-xs font-bold ${getFrecuenciaColor(cliente.frecuencia)}`}>
+                      {cliente.frecuencia}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-center font-bold text-amber-600 dark:text-amber-400">{cliente.visitas}</td>
+                  
+                  {/* BOTONES DE ACCIÓN ESTILIZADOS EN RECUADROS DORADOS */}
+                  <td className="px-6 py-4 text-center">
+                    <div className="flex justify-center gap-2">
+                      <button 
+                        onClick={() => abrirModal('ver', cliente)}
+                        className="p-2 border border-amber-500/20 rounded-xl text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-black transition duration-200">
+                        <Eye size={16} />
+                      </button>
+
+                      <button 
+                        onClick={() => abrirModal('editar', cliente)}
+                        className="p-2 border border-amber-500/20 rounded-xl text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-black transition duration-200">
+                        <Pencil size={16} />
+                      </button>
+
+                      <button 
+                        onClick={() => abrirModal('borrar', cliente)}
+                        className="p-2 border border-red-500/20 rounded-xl text-red-500 hover:bg-red-600 hover:text-white transition duration-200">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              
+              {clientesFiltrados.length === 0 && (
+                <tr>
+                  <td colSpan="5" className="px-6 py-12 text-center text-gray-500 font-medium italic">
+                    No se encontraron clientes.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* RENDERIZADO DE MODALES */}
-      
+      {/* --- MODALES --- */}
       <FormularioVer 
         isOpen={modalType === 'ver'} 
         onClose={cerrarModal} 
         cliente={clienteSeleccionado} 
       />
 
-     <FormularioEditar 
-  isOpen={modalType === 'editar'} 
-  onClose={cerrarModal} 
-  cliente={clienteSeleccionado}
-  onSubmit={(form) => {
-    actualizarCliente(clienteSeleccionado.id, form);
-    cerrarModal();
-  }}
-/>
-      {/* MODAL DE CONFIRMACIÓN DE BORRADO */}
+      <FormularioEditar 
+        isOpen={modalType === 'editar'} 
+        onClose={cerrarModal} 
+        cliente={clienteSeleccionado}
+        onSubmit={(form) => {
+          actualizarCliente(clienteSeleccionado.id, form);
+          cerrarModal();
+        }}
+      />
+
+      {/* MODAL DE CONFIRMACIÓN DE BORRADO ESTILIZADO */}
       {modalType === 'borrar' && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-white dark:bg-[#0f0f0f] w-full max-w-sm rounded-2xl p-6 border border-red-500/20 shadow-2xl">
+          <div className="bg-white dark:bg-[#0f0f0f] w-full max-w-sm rounded-3xl p-6 border border-red-500/20 shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center text-red-500 mb-4">
                 <AlertTriangle size={32} />
               </div>
-              <h3 className="text-xl font-bold mb-2 dark:text-white">¿Eliminar cliente?</h3>
-              <p className="text-gray-500 text-sm mb-6">
-                ¿Estás seguro de eliminar a <b>{clienteSeleccionado?.nombre}</b>? Esta acción no se puede deshacer.
+              <h3 className="text-xl font-bold text-black dark:text-white mb-2">¿Eliminar cliente?</h3>
+              <p className="text-gray-500 text-sm mb-6 px-2">
+                ¿Estás seguro de eliminar a <span className="text-amber-600 dark:text-amber-400 font-bold italic">"{clienteSeleccionado?.nombre}"</span>? Esta acción no se puede deshacer.
               </p>
               <div className="flex gap-3 w-full">
-                <button onClick={cerrarModal} className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-zinc-800 font-semibold transition">
+                <button onClick={cerrarModal} className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-zinc-800 font-bold text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-zinc-700 transition">
                   Cancelar
                 </button>
                 <button 
                   onClick={() => eliminarCliente(clienteSeleccionado.id)} 
-                  className="flex-1 py-3 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-500 transition"
+                  className="flex-1 py-3 rounded-xl bg-red-600 text-white font-bold text-sm hover:bg-red-500 shadow-lg shadow-red-600/10 transition"
                 >
                   Sí, eliminar
                 </button>

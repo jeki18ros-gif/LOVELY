@@ -1,6 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { pdf } from '@react-pdf/renderer';
+import { BoletaPDF } from './pdf/pdf';
 import { Wallet, Banknote, Smartphone, CreditCard, Layers, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+
 const METODOS = ['efectivo', 'yape', 'plin', 'tarjeta'];
 
 const PaymentModule = ({
@@ -14,6 +17,23 @@ const PaymentModule = ({
   const [metodo, setMetodo] = useState('efectivo');
   const [montoPago, setMontoPago] = useState('');
   const [pagosMixtos, setPagosMixtos] = useState([{ tipo: 'efectivo', monto: '' }]);
+  
+  // Estado para las mini notificaciones (Toasts)
+  const [notificacion, setNotificacion] = useState({ visible: false, mensaje: '', tipo: 'info' });
+
+  // Efecto para limpiar la notificación automáticamente después de 4 segundos
+  useEffect(() => {
+    if (notificacion.visible) {
+      const timer = setTimeout(() => {
+        setNotificacion(prev => ({ ...prev, visible: false }));
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [notificacion.visible]);
+
+  const mostrarToast = (mensaje, tipo = 'info') => {
+    setNotificacion({ visible: true, mensaje, tipo });
+  };
 
   const totalConComisionGeneral = useMemo(() => {
     return metodo === 'tarjeta' ? total * 1.05 : total;
@@ -63,159 +83,190 @@ const PaymentModule = ({
     setMetodo('efectivo'); setMontoPago('');
     setPagosMixtos([{ tipo: 'efectivo', monto: '' }]);
   };
-const guardarVenta = async () => {
-  try {
 
-    // =========================
-    // GENERAR CÓDIGO DE VENTA
-    // =========================
-    const codigoVenta = `VENTA-${Date.now()}`;
+  const guardarVenta = async () => {
+    try {
+      const codigoVenta = `VENTA-${Date.now()}`;
 
-    // =========================
-    // DATOS CLIENTE
-    // =========================
-    const cliente_id =
-      ventaActiva.cliente &&
-      ventaActiva.cliente.id !== 'manual'
-        ? ventaActiva.cliente.id
-        : null;
+      const cliente_id =
+        ventaActiva.cliente && ventaActiva.cliente.id !== 'manual'
+          ? ventaActiva.cliente.id
+          : null;
 
-    const nombre_cliente =
-      ventaActiva.cliente
-        ? ventaActiva.cliente.nombre
-        : 'Cliente general';
+      const nombre_cliente =
+        ventaActiva.cliente ? ventaActiva.cliente.nombre : 'Cliente general';
 
-    // =========================
-    // GUARDAR VENTA
-    // =========================
-    const { data: ventaData, error: ventaError } = await supabase
-      .from('ventas')
-      .insert([
-        {
+      // 1. Guardar Cabecera de Venta
+      const { data: ventaData, error: ventaError } = await supabase
+        .from('ventas')
+        .insert([
+          {
+            codigo_venta: codigoVenta,
+            fecha: new Date(),
+            monto_total: total,
+            cliente_id,
+            nombre_cliente
+          }
+        ])
+        .select()
+        .single();
+
+      if (ventaError) throw ventaError;
+
+      // 2. Armar Detalles
+      const detalles = [
+        ...ventaActiva.productos.map(p => ({
           codigo_venta: codigoVenta,
-          fecha: new Date(),
-          monto_total: total,
-          cliente_id,
-          nombre_cliente
-        }
-      ])
-      .select()
-      .single();
+          tipo: 'producto',
+          id_producto: p.id,
+          id_servicio: null,
+          cantidad: p.cantidad,
+          precio_unitario: p.precio,
+          descuento: 0,
+          subtotal: p.precio * p.cantidad,
+          nombre: p.nombre 
+        })),
 
-    if (ventaError) throw ventaError;
-
-    // =========================
-    // ARMAR DETALLES
-    // =========================
-    const detalles = [
-      ...ventaActiva.productos.map(p => ({
-        codigo_venta: codigoVenta,
-        tipo: 'producto',
-        id_producto: p.id,
-        id_servicio: null,
-        cantidad: p.cantidad,
-        precio_unitario: p.precio,
-        descuento: 0,
-        subtotal: p.precio * p.cantidad
-      })),
-
-      ...ventaActiva.servicios.map(s => ({
-        codigo_venta: codigoVenta,
-        tipo: 'servicio',
-        id_producto: null,
-        id_servicio: s.id,
-        cantidad: s.cantidad,
-        precio_unitario: s.precio,
-        descuento: 0,
-        subtotal: s.precio * s.cantidad
-      }))
-    ];
-
-    // =========================
-    // APLICAR DESCUENTO GLOBAL
-    // =========================
-    if (descuento > 0 && detalles.length > 0) {
-
-      const descuentoPorItem = descuento / detalles.length;
-
-      detalles.forEach(d => {
-        d.descuento = descuentoPorItem;
-        d.subtotal = d.subtotal - descuentoPorItem;
-      });
-    }
-
-    // =========================
-    // GUARDAR DETALLES
-    // =========================
-    const { error: detalleError } = await supabase
-      .from('detalle_venta')
-      .insert(detalles);
-
-    if (detalleError) throw detalleError;
-
-    // =========================
-    // ARMAR PAGOS
-    // =========================
-    let pagos = [];
-
-    if (metodo === 'mixto') {
-
-      pagos = pagosMixtos.map(p => ({
-        codigo_venta: codigoVenta,
-        tipo: p.tipo,
-        descripcion: 'mixto',
-        monto: Number(p.monto)
-      }));
-
-    } else {
-
-      pagos = [
-        {
+        ...ventaActiva.servicios.map(s => ({
           codigo_venta: codigoVenta,
-          tipo: metodo,
-          descripcion: null,
-          monto: Number(montoPago)
-        }
+          tipo: 'servicio',
+          id_producto: null,
+          id_servicio: s.id,
+          cantidad: s.cantidad,
+          precio_unitario: s.precio,
+          descuento: 0,
+          subtotal: s.precio * s.cantidad,
+          nombre: s.nombre 
+        }))
       ];
+
+      if (descuento > 0 && detalles.length > 0) {
+        const descuentoPorItem = descuento / detalles.length;
+        detalles.forEach(d => {
+          d.descuento = descuentoPorItem;
+          d.subtotal = d.subtotal - descuentoPorItem;
+        });
+      }
+
+      const detallesParaBD = detalles.map(({ nombre, ...resto }) => resto);
+      const { error: detalleError } = await supabase
+        .from('detalle_venta')
+        .insert(detallesParaBD);
+
+      if (detalleError) throw detalleError;
+
+      // 3. Armar e Insertar Pagos
+      let pagos = [];
+      if (metodo === 'mixto') {
+        pagos = pagosMixtos.map(p => ({
+          codigo_venta: codigoVenta,
+          tipo: p.tipo,
+          descripcion: 'mixto',
+          monto: Number(p.monto)
+        }));
+      } else {
+        pagos = [
+          {
+            codigo_venta: codigoVenta,
+            tipo: metodo,
+            descripcion: null,
+            monto: Number(montoPago || totalConComisionGeneral)
+          }
+        ];
+      }
+
+      const { error: pagoError } = await supabase.from('pago').insert(pagos);
+      if (pagoError) throw pagoError;
+
+      // 4. Estructurar la información para la Boleta PDF
+      const metodoPagoDetalle = metodo === 'mixto' 
+        ? `Mixto (${pagosMixtos.map(p => `${p.tipo.toUpperCase()}: S/${p.monto}`).join(' + ')})`
+        : metodo;
+
+      const comisionTotal = metodo === 'mixto' 
+        ? resumenMixto.totalComisiones 
+        : (metodo === 'tarjeta' ? (total * 0.05) : 0);
+
+      const infoBoleta = {
+        nombreCliente: nombre_cliente,
+        fecha: new Date().toLocaleDateString('es-PE', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }),
+        metodoPago: metodoPagoDetalle,
+        items: detalles.map(d => ({
+          nombre: d.nombre || (d.tipo === 'producto' ? 'Producto' : 'Servicio'),
+          cantidad: d.cantidad,
+          precio_unitario: d.precio_unitario,
+          subtotal: d.subtotal
+        })),
+        subtotal: subtotal,
+        descuento: descuento,
+        comision: comisionTotal,
+        totalFinal: metodo === 'mixto' ? (total + comisionTotal) : totalConComisionGeneral
+      };
+
+      const doc = <BoletaPDF data={infoBoleta} />;
+      const asBlob = await pdf(doc).toBlob();
+      
+      const url = URL.createObjectURL(asBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `boleta_${Date.now()}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      mostrarToast('Venta registrada y boleta descargada con éxito', 'success');
+      limpiarFormulario();
+      onConfirmar();
+
+    } catch (error) {
+      console.error(error);
+      mostrarToast('Error al guardar la venta o generar el PDF', 'error');
     }
+  };
 
-    // =========================
-    // GUARDAR PAGOS
-    // =========================
-    const { error: pagoError } = await supabase
-      .from('pago')
-      .insert(pagos);
-
-    if (pagoError) throw pagoError;
-
-    alert('Venta registrada correctamente');
-
-    limpiarFormulario();
-
-    onConfirmar();
-
-  } catch (error) {
-
-    console.error(error);
-
-    alert('Error al guardar venta');
-  }
-};
   const handlePagar = async () => {
     if (metodo === 'mixto') {
       if (resumenMixto.faltanteReal > 0.01) {
-        alert(`Falta cubrir S/ ${resumenMixto.faltanteReal.toFixed(2)}`);
+        mostrarToast(`Falta cubrir S/ ${resumenMixto.faltanteReal.toFixed(2)}`, 'warning');
         return;
       }
     } else {
       const monto = Number(montoPago || 0);
-      if (monto < totalConComisionGeneral) { alert('Monto insuficiente'); return; }
+      if (monto < totalConComisionGeneral) { 
+        mostrarToast('Monto ingresado insuficiente', 'warning'); 
+        return; 
+      }
     }
-    if (window.confirm('¿Confirmar pago?')) { await guardarVenta();}
+    if (window.confirm('¿Confirmar pago y emitir boleta?')) { 
+      await guardarVenta();
+    }
   };
 
   return (
-    <div className="max-w-2xl p-6 rounded-xl bg-white text-gray-800 border border-gray-200 dark:bg-[#121212] dark:text-white dark:border-zinc-800 shadow-2xl">
+    <div className="relative max-w-2xl p-6 rounded-xl bg-white text-gray-800 border border-gray-200 dark:bg-[#121212] dark:text-white dark:border-zinc-800 shadow-2xl">
+      
+      {/* NOTIFICACIÓN FLOTANTE (TOAST) */}
+      {notificacion.visible && (
+        <div className={`fixed bottom-5 right-5 z-50 flex items-center gap-3 p-4 rounded-xl shadow-xl border backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 duration-300 ${
+          notificacion.tipo === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500' :
+          notificacion.tipo === 'warning' ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' :
+          'bg-red-500/10 border-red-500/30 text-red-500'
+        }`}>
+          {notificacion.tipo === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+          <p className="text-sm font-medium">{notificacion.mensaje}</p>
+          <button onClick={() => setNotificacion(prev => ({ ...prev, visible: false }))} className="ml-2 p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* HEADER */}
       <div className="flex flex-col items-center mb-8">
         <div className="flex items-center gap-2 self-start mb-4">

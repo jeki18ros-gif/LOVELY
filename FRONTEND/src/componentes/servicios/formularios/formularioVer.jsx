@@ -21,13 +21,12 @@ export default function FormularioVer({ isOpen, onClose, service }) {
   });
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
       <div
         className="
           relative
           w-full
           max-w-2xl
-          /* Cambio clave: altura máxima dinámica y flex-col */
           max-h-[90vh] 
           flex flex-col
           overflow-hidden
@@ -42,7 +41,7 @@ export default function FormularioVer({ isOpen, onClose, service }) {
         {/* Decoración superior */}
         <div className="h-2 w-full shrink-0 bg-gradient-to-r from-yellow-700 via-yellow-400 to-yellow-700" />
 
-        {/* Header - shrink-0 evita que el header se aplaste */}
+        {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-yellow-500/10 shrink-0">
           <div>
             <h2 className="text-2xl font-bold text-black dark:text-white">
@@ -61,15 +60,13 @@ export default function FormularioVer({ isOpen, onClose, service }) {
           </button>
         </div>
 
-        {/* Contenido - flex-1 toma el espacio restante y activa el scroll */}
+        {/* Contenido con scroll */}
         <div
           className="
             flex-1 
             overflow-y-auto 
             p-6 
             space-y-5
-            
-            /* Estilos de scrollbar */
             scrollbar-thin
             scrollbar-thumb-yellow-500/40
             scrollbar-track-transparent
@@ -107,7 +104,7 @@ export default function FormularioVer({ isOpen, onClose, service }) {
                 <div className="p-2 rounded-xl bg-yellow-500/10">
                   <DollarSign className="text-yellow-600 dark:text-yellow-400" size={20} />
                 </div>
-                <p className="text-xs uppercase font-bold tracking-wider text-gray-500">Precio</p>
+                <p className="text-xs uppercase font-bold tracking-wider text-gray-500 dark:text-gray-400">Precio</p>
               </div>
               <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
                 s/ {service.precio}
@@ -119,7 +116,7 @@ export default function FormularioVer({ isOpen, onClose, service }) {
                 <div className="p-2 rounded-xl bg-yellow-500/10">
                   <Clock className="text-yellow-600 dark:text-yellow-400" size={20} />
                 </div>
-                <p className="text-xs uppercase font-bold tracking-wider text-gray-500">Duración</p>
+                <p className="text-xs uppercase font-bold tracking-wider text-gray-500 dark:text-gray-400">Duración</p>
               </div>
               <p className="text-2xl font-semibold text-black dark:text-white">
                 {service.duracion} min
@@ -133,7 +130,7 @@ export default function FormularioVer({ isOpen, onClose, service }) {
               <div className="p-2 rounded-xl bg-yellow-500/10">
                 <FileText className="text-yellow-600 dark:text-yellow-400" size={20} />
               </div>
-              <p className="text-xs uppercase font-bold tracking-wider text-gray-500">Descripción</p>
+              <p className="text-xs uppercase font-bold tracking-wider text-gray-500 dark:text-gray-400">Descripción</p>
             </div>
             <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
               {service.descripcion || "Este servicio no tiene descripción registrada."}
@@ -147,26 +144,26 @@ export default function FormularioVer({ isOpen, onClose, service }) {
             </h4>
             <div className="space-y-4">
               <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2 text-gray-500">
+                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                   <Calendar size={16} />
                   <span>Fecha de Registro</span>
                 </div>
                 <span className="font-medium text-black dark:text-gray-300">{fechaFormateada}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2 text-gray-500">
+                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                   <Hash size={16} />
                   <span>ID del Sistema</span>
                 </div>
                 <span className="font-medium text-black dark:text-gray-300">
-                  #SERV-{service.id.slice(0, 8)}
+                  {service.id ? `#SERV-${service.id.slice(0, 8)}` : "N/A"}
                 </span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Footer decorativo - shrink-0 para mantener su altura fija */}
+        {/* Footer decorativo */}
         <div className="h-1 w-full shrink-0 bg-gradient-to-r from-yellow-700 via-yellow-400 to-yellow-700" />
       </div>
     </div>

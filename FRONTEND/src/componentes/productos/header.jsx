@@ -9,9 +9,9 @@ const ProductsHeader = ({ onOpenModal }) => {
 
         {/* Título */}
         <div className="flex items-center gap-2">
-          <Package className="text-gray-400" size={20} />
+          <Package className="text-gray-400 dark:text-amber-500/50" size={20} />
 
-          <h2 className="text-sm font-bold tracking-widest uppercase dark:text-gray-200">
+          <h2 className="text-sm font-bold tracking-widest uppercase text-gray-700 dark:text-amber-500">
             Productos
           </h2>
         </div>
@@ -19,10 +19,9 @@ const ProductsHeader = ({ onOpenModal }) => {
         {/* Botón Nuevo Producto */}
         <button
           onClick={onOpenModal}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-cyan-500 text-cyan-500 hover:bg-cyan-500/10 transition-all font-medium text-xs"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-amber-500 text-amber-600 dark:text-amber-500 hover:bg-amber-500 hover:text-white dark:hover:text-black transition-all font-medium text-xs shadow-sm hover:shadow-amber-500/20"
         >
-          <Plus size={16} className="text-cyan-500" />
-
+          <Plus size={16} />
           <span>Nuevo producto</span>
         </button>
 

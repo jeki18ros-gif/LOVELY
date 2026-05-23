@@ -9,9 +9,10 @@ import {
   X,
   Eye,
   Edit2,
-  AlertCircle // Icono para advertencias de edición
+  AlertCircle,
+  Calendar // Añadido el icono de calendario
 } from 'lucide-react';
-import { supabase } from '../../lib/supabase'; 
+import { supabase } from '../../../lib/supabase'; 
 
 const Ingresos = () => {
   const theme = {
@@ -20,10 +21,15 @@ const Ingresos = () => {
     goldBorder: 'border-[#D4AF37]',
   };
 
-  // ESTADOS PARA DATOS Y FILTROS
+  // ==========================================
+  // 1. ESTADOS PARA DATOS Y FILTROS (ACTUALIZADO)
+  // ==========================================
   const [ingresos, setIngresos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filtroFecha, setFiltroFecha] = useState('');
+  // Ahora el filtro de fecha inicia con el día de hoy por defecto (YYYY-MM-DD)
+  const [filtroFecha, setFiltroFecha] = useState(
+    new Date().toISOString().split('T')[0]
+  );
   const [filtroTipo, setFiltroTipo] = useState('Todos');
   const [filtroMetodo, setFiltroMetodo] = useState('Todos');
 
@@ -37,21 +43,21 @@ const Ingresos = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedIngreso, setSelectedIngreso] = useState(null);
 
-  // ESTADOS PARA EL MODAL DE EDICIÓN / CORRECCIÓN (MODIFICADOS)
+  // ESTADOS PARA EL MODAL DE EDICIÓN
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
   const [editMonto, setEditMonto] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editMetodo, setEditMetodo] = useState('Efectivo');
-  const [esVenta, setEsVenta] = useState(false); // Determina si bloqueamos el monto
+  const [esVenta, setEsVenta] = useState(false);
 
   // ==========================================
-  // PETICIÓN A SUPABASE (TRAER PAGOS)
+  // 2. PETICIÓN FILTRADA POR FECHA A SUPABASE (ACTUALIZADO)
   // ==========================================
   const fetchIngresos = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('pago')
         .select(`
           id,
@@ -71,6 +77,15 @@ const Ingresos = () => {
           )
         `);
 
+      // Si hay una fecha seleccionada, filtramos el día entero desde las 00:00:00 hasta las 23:59:59
+      if (filtroFecha) {
+        const inicioDia = `${filtroFecha}T00:00:00.000Z`;
+        const finDia = `${filtroFecha}T23:59:59.999Z`;
+        query = query.gte('fecha', inicioDia).lte('fecha', finDia);
+      }
+
+      const { data, error } = await query;
+
       if (error) throw error;
       setIngresos(data || []);
     } catch (error) {
@@ -80,9 +95,10 @@ const Ingresos = () => {
     }
   };
 
+  // Se vuelve a ejecutar automáticamente cada vez que cambia la 'filtroFecha'
   useEffect(() => {
     fetchIngresos();
-  }, []);
+  }, [filtroFecha]);
 
   // ==========================================
   // LÓGICA DEL FORMULARIO: INGRESO EXTRA Y EDICIÓN
@@ -117,16 +133,12 @@ const Ingresos = () => {
     }
   };
 
-  // Abre el modal aplicando las reglas de negocio de permisos
   const handleAbirEdicion = (ingreso) => {
     setEditId(ingreso.id);
     setEditMonto(ingreso.monto);
     setEditDesc(ingreso.descripcion || `Venta registrada de ${ingreso.ventas?.nombre_cliente || 'Cliente'}`);
     setEditMetodo(ingreso.tipo || 'Efectivo');
-    
-    // Si tiene un codigo_venta, es una venta registrada -> Bloqueamos edición de monto
     setEsVenta(!!ingreso.codigo_venta); 
-    
     setIsEditModalOpen(true);
   };
 
@@ -135,13 +147,11 @@ const Ingresos = () => {
     if (!editMonto || parseFloat(editMonto) <= 0) return;
 
     try {
-      // Definimos el objeto con los datos a actualizar
       const datosActualizados = {
         descripcion: editDesc,
         tipo: editMetodo
       };
 
-      // Solo adjuntamos el monto a la mutación si NO es una venta registrada
       if (!esVenta) {
         datosActualizados.monto = parseFloat(editMonto);
       }
@@ -162,10 +172,10 @@ const Ingresos = () => {
   };
 
   // ==========================================
-  // FILTROS Y CLASIFICACIÓN DINÁMICA
+  // FILTROS LOCALES (TIPO Y MÉTODO)
   // ==========================================
   const limpiarFiltros = () => {
-    setFiltroFecha('');
+    setFiltroFecha(new Date().toISOString().split('T')[0]); // Restablece al día de hoy
     setFiltroTipo('Todos');
     setFiltroMetodo('Todos');
   };
@@ -183,21 +193,19 @@ const Ingresos = () => {
     return 'Servicio'; 
   };
 
+  // Removido el filtro de fecha de aquí ya que ahora se procesa directamente en la consulta de Supabase
   const ingresosFiltrados = ingresos.filter(item => {
-    const fechaOrigen = item.ventas?.fecha || item.fecha;
-    const cumpleFecha = filtroFecha ? fechaOrigen?.startsWith(filtroFecha) : true;
-    
     const tipoItem = obtenerTipoReal(item);
     const cumpleTipo = filtroTipo === 'Todos' ? true : tipoItem === filtroTipo;
     const cumpleMetodo = filtroMetodo === 'Todos' ? true : item.tipo?.toLowerCase() === filtroMetodo.toLowerCase();
 
-    return cumpleFecha && cumpleTipo && cumpleMetodo;
+    return cumpleTipo && cumpleMetodo;
   });
 
   // ==========================================
   // CÁLCULO DE LAS TARJETAS (RESUMEN)
   // ==========================================
-  const totales = ingresos.reduce((acc, item) => {
+  const totales = ingresosFiltrados.reduce((acc, item) => {
     const montoNum = Number(item.monto || 0);
     acc.total += montoNum;
 
@@ -229,9 +237,6 @@ const Ingresos = () => {
     extra: 0
   });
 
-  // ==========================================
-  // LÓGICA PARA CONTROLAR EL MANEJO DEL DETALLE
-  // ==========================================
   const handleVerDetalle = (ingreso) => {
     let desgloseServicios = 0;
     let desgloseProductos = 0;
@@ -299,13 +304,16 @@ const Ingresos = () => {
       {/* Filtros */}
       <div className="bg-white dark:bg-[#141414] p-6 mb-8 rounded-sm shadow-sm border border-gray-200 dark:border-gray-800">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+          {/* CALENDARIO CONECTADO DIRECTAMENTE A SUPABASE */}
           <div>
-            <label className="block text-[10px] uppercase tracking-widest mb-2 opacity-60">Rango de Fechas</label>
+            <label className="block text-[10px] uppercase tracking-widest mb-2 opacity-60 flex items-center gap-1">
+              <Calendar size={12} className={theme.gold} /> Día Específico
+            </label>
             <input 
               type="date" 
               value={filtroFecha}
               onChange={(e) => setFiltroFecha(e.target.value)}
-              className="w-full bg-transparent border-b border-gray-300 dark:border-gray-700 p-2 focus:outline-none focus:border-[#D4AF37] dark:text-white text-black" 
+              className="w-full bg-transparent border-b border-gray-300 dark:border-gray-700 p-2 focus:outline-none focus:border-[#D4AF37] dark:text-white text-black font-medium" 
             />
           </div>
 
@@ -343,7 +351,7 @@ const Ingresos = () => {
             onClick={limpiarFiltros}
             className="flex items-center justify-center gap-2 text-xs uppercase tracking-widest opacity-70 hover:opacity-100 transition-opacity pb-2"
           >
-            <RotateCcw size={14} /> Limpiar Filtros
+            <RotateCcw size={14} /> Reajustar Filtros
           </button>
         </div>
       </div>
@@ -426,7 +434,7 @@ const Ingresos = () => {
               })}
               {ingresosFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="p-8 text-center text-sm opacity-40">No hay registros para los filtros seleccionados</td>
+                  <td colSpan="6" className="p-8 text-center text-sm opacity-40">No hay registros para este día</td>
                 </tr>
               )}
             </tbody>
@@ -507,7 +515,7 @@ const Ingresos = () => {
         </div>
       )}
 
-      {/* MODAL EDICIÓN CON PERMISOS INTELIGENTES */}
+      {/* MODAL EDICIÓN */}
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex justify-center items-center z-50">
           <div className="bg-white dark:bg-[#141414] w-full max-w-md p-6 border border-gray-200 dark:border-gray-800 shadow-2xl rounded-xs">
@@ -520,7 +528,6 @@ const Ingresos = () => {
               </button>
             </div>
 
-            {/* Aviso visual si el monto está bloqueado */}
             {esVenta && (
               <div className="mb-4 bg-blue-500/10 border border-blue-500/20 text-blue-500 dark:text-blue-400 p-3 rounded-sm text-xs flex gap-2 items-start">
                 <AlertCircle size={16} className="shrink-0 mt-0.5" />
@@ -539,7 +546,7 @@ const Ingresos = () => {
                   type="number" 
                   step="0.01"
                   required
-                  disabled={esVenta} // Permiso aplicado: Deshabilitado si es venta
+                  disabled={esVenta}
                   value={editMonto}
                   onChange={(e) => setEditMonto(e.target.value)}
                   className={`w-full bg-transparent border-b border-gray-300 dark:border-gray-700 p-2 text-xl focus:outline-none ${

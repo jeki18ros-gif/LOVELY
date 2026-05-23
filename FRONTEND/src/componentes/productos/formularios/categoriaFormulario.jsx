@@ -1,6 +1,17 @@
 import React from 'react';
 
 const CategoriaFormulario = ({ newCat, setNewCat, onSave, onCancel, isEditing }) => {
+  
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (newCat.trim()) onSave();
+    }
+    if (e.key === 'Escape') {
+      onCancel();
+    }
+  };
+
   return (
     <div className="mb-4 p-3 rounded-xl bg-gray-100 dark:bg-zinc-800 space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
       <input
@@ -9,14 +20,15 @@ const CategoriaFormulario = ({ newCat, setNewCat, onSave, onCancel, isEditing })
         value={newCat}
         onChange={(e) => setNewCat(e.target.value)}
         placeholder="Nombre de categoría"
-        className="w-full p-2 rounded-lg text-sm bg-white dark:bg-zinc-900 border border-transparent focus:border-amber-500 outline-none transition-all"
-        onKeyDown={(e) => e.key === 'Enter' && onSave()}
+        className="w-full p-2 rounded-lg text-sm bg-white dark:bg-zinc-900 border border-transparent focus:border-amber-500 text-gray-900 dark:text-white outline-none transition-all"
+        onKeyDown={handleKeyDown}
       />
 
       <div className="flex gap-2">
         <button
           onClick={onSave}
-          className="flex-1 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold py-2 rounded-lg transition-colors"
+          disabled={!newCat.trim()}
+          className="flex-1 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-500/40 disabled:cursor-not-allowed text-white text-xs font-semibold py-2 rounded-lg transition-colors"
         >
           {isEditing ? 'Actualizar' : 'Guardar'}
         </button>

@@ -1,11 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { RotateCcw, Eye, X, History } from 'lucide-react';
+import { RotateCcw, Eye, X, History, CheckCircle2, AlertCircle } from 'lucide-react';
 import { supabase } from "../../../lib/supabase";
 
 export default function HistoryServicio() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedLog, setSelectedLog] = useState(null);
+
+  // Estado para el sistema de notificaciones flotantes (Toasts)
+  const [notificacion, setNotificacion] = useState({ visible: false, mensaje: '', tipo: 'info' });
+
+  const mostrarToast = (mensaje, tipo = 'info') => {
+    setNotificacion({ visible: true, mensaje, tipo });
+  };
+
+  // Auto-cerrar el toast tras 4 segundos
+  useEffect(() => {
+    if (notificacion.visible) {
+      const timer = setTimeout(() => {
+        setNotificacion(prev => ({ ...prev, visible: false }));
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [notificacion.visible]);
 
   const fetchHistorial = async () => {
     setLoading(true);
@@ -15,16 +32,14 @@ export default function HistoryServicio() {
         .select('*')
         .order('fecha', { ascending: false });
 
-      if (error) {
-        alert("Error de Supabase (Servicios): " + error.message);
-        throw error;
-      }
+      if (error) throw error;
       
       setLogs(data || []);
     } catch (error) {
       console.error("Error cargando historial de servicios:", error);
+      mostrarToast("Error al conectar con la base de datos de servicios", "error");
     } finally {
-      loading && setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -44,10 +59,9 @@ export default function HistoryServicio() {
     });
   };
 
-const handleRevertir = async (log) => {
+  const handleRevertir = async (log) => {
     try {
       if (log.accion === 'Editado' && log.valores_anteriores) {
-        // Construimos el objeto de actualización desde los valores anteriores del JSON
         const updateData = {
           precio: Number(log.valores_anteriores.precio),
           duracion: Number(log.valores_anteriores.duracion || 0),
@@ -57,7 +71,6 @@ const handleRevertir = async (log) => {
         if (log.valores_anteriores.descripcion) updateData.descripcion = log.valores_anteriores.descripcion;
         if (log.valores_anteriores.estado !== undefined) updateData.estado = log.valores_anteriores.estado;
 
-        // Al actualizar la tabla, el trigger de la base de datos creará la traza del cambio automáticamente
         const { error } = await supabase
           .from('servicio')
           .update(updateData)
@@ -65,16 +78,37 @@ const handleRevertir = async (log) => {
 
         if (error) throw error;
 
-        alert('¡Servicio revertido con éxito!');
+        mostrarToast(`¡Cambios en el servicio "${log.nombre_servicio}" revertidos con éxito!`, "success");
         fetchHistorial();
       }
     } catch (error) {
       console.error("Error al revertir servicio:", error);
-      alert("No se pudo revertir: " + error.message);
+      mostrarToast(`No se pudo revertir el servicio: ${error.message}`, "error");
     }
   };
+
   return (
     <div className="p-6 bg-white dark:bg-[#141414] transition-colors relative">
+      
+      {/* NOTIFICACIÓN FLOTANTE (TOAST) */}
+      {notificacion.visible && (
+        <div className={`fixed bottom-5 right-5 z-[60] flex items-center gap-3 p-4 rounded-2xl shadow-2xl border backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 duration-300 ${
+          notificacion.tipo === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500' :
+          notificacion.tipo === 'warning' ? 'bg-yellow-600/10 border-yellow-600/30 text-yellow-600 dark:text-yellow-400' :
+          'bg-red-500/10 border-red-500/30 text-red-500'
+        }`}>
+          {notificacion.tipo === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+          <p className="text-sm font-medium">{notificacion.mensaje}</p>
+          <button 
+            type="button"
+            onClick={() => setNotificacion(prev => ({ ...prev, visible: false }))} 
+            className="ml-2 p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       <div className="mb-4 flex items-center gap-2 text-xs uppercase tracking-widest font-semibold text-[#D4AF37]">
         <History size={16} />
         Log de Auditoría de Servicios

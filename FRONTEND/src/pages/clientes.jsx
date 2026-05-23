@@ -20,7 +20,26 @@ const Clientes = () => {
   useEffect(() => {
     obtenerClientes();
   }, []);
+useEffect(() => {
+  const channel = supabase
+    .channel('clientes-db-changes')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'clientes',
+      },
+      () => {
+        obtenerClientes();
+      }
+    )
+    .subscribe();
 
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, []);
   const capitalizar = (texto) => {
     if (!texto) return 'Nuevo';
     return texto.charAt(0).toUpperCase() + texto.slice(1);
@@ -126,41 +145,36 @@ if (seguimiento && seguimiento.trim() !== "") {
           }
         : c
     ));};
-  const handleSaveCliente = async (form) => {
-    const { nombre, numero, correo } = form;
+const handleSaveCliente = async (form) => {
+  const { nombre, numero, correo } = form;
 
-    const { data, error } = await supabase
-      .from('clientes')
-      .insert([{
+  const { error } = await supabase
+    .from('clientes')
+    .insert([
+      {
         nombre,
         numero: numero || null,
         correo: correo || null,
         visitas: 0,
         frecuencia: 'nuevo'
-      }])
-      .select();
+      }
+    ]);
 
-    if (error) {
-      console.error(error);
-      alert('Error al crear cliente');
-      return;
-    }
+  if (error) {
+    console.error(error);
+    alert('Error al crear cliente');
+    return;
+  }
 
-    const nuevoCliente = {
-      id: data[0].id,
-      nombre: data[0].nombre,
-      telefono: data[0].numero || '—',
-      correo: data[0].correo || '—',
-      frecuencia: capitalizar(data[0].frecuencia),
-      visitas: data[0].visitas
-    };
+  // RECARGAR TABLA AUTOMÁTICAMENTE
+  await obtenerClientes();
 
-    setListaClientes(prev => [nuevoCliente, ...prev]);
-    setIsModalOpen(false);
-  };
+  // CERRAR MODAL
+  setIsModalOpen(false);
+};
 
 return (
-    <div className="min-h-screen bg-gray-666 dark:bg-[#0a0a0a] transition-colors duration-300">
+  <div className="min-h-screen bg-gradient-to-br from-[#fffdf7] via-[#f8f5ed] to-[#f2ede3] dark:from-[#050505] dark:via-[#0b0b0b] dark:to-[#111111] transition-all duration-300">
       <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
         
         {/* SECCIÓN 1: HEADER (Título y Acciones principales) */}
@@ -169,7 +183,14 @@ return (
         </header>
 
         {/* SECCIÓN 2: CONTROLES (Búsqueda y Filtros) */}
-        <section className="bg-white dark:bg-zinc-900/50 p-4 rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-sm">
+        <section className="
+bg-white/80 dark:bg-[#101010]/90
+backdrop-blur-xl
+p-5
+rounded-3xl
+border border-amber-500/20
+shadow-[0_0_30px_rgba(251,191,36,0.08)]
+">
           <div className="flex flex-col gap-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-zinc-500 px-1">
               Opciones de filtrado
@@ -179,7 +200,15 @@ return (
         </section>
 
         {/* SECCIÓN 3: CONTENIDO PRINCIPAL (Tabla/Listado) */}
-        <main className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+        <main className="
+bg-white/90 dark:bg-[#0d0d0d]
+backdrop-blur-xl
+rounded-[30px]
+border border-amber-500/20
+shadow-[0_10px_40px_rgba(251,191,36,0.08)]
+overflow-hidden
+transition-all duration-300
+">
           <div className="overflow-x-auto">
             <ClientesTable 
               filters={filters}

@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, Calendar, Filter, X, DollarSign } from 'lucide-react';
-import { supabase } from "../../../lib/supabase"
+import { Eye, Calendar, Filter, X, DollarSign, CheckCircle2, AlertCircle } from 'lucide-react';
+import { supabase } from "../../../lib/supabase";
+
 export default function CierreCaja() {
   // Estados para los filtros superiores
   const [filtroEstado, setFiltroEstado] = useState('Todos');
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
-const [cierresCaja, setCierresCaja] = useState([]);
-const [loading, setLoading] = useState(true);
+  const [cierresCaja, setCierresCaja] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
   // Estado para controlar el modal de "Ver más"
   const [cierreSeleccionado, setCierreSeleccionado] = useState(null);
+
+  // Estado para el sistema de notificaciones flotantes (Toasts)
+  const [notificacion, setNotificacion] = useState({ visible: false, mensaje: '', tipo: 'info' });
 
   // Formateador de fecha/hora para legibilidad premium
   const formatFecha = (dateString) => {
@@ -23,33 +28,46 @@ const [loading, setLoading] = useState(true);
       minute: '2-digit'
     });
   };
-const fetchCierresCaja = async () => {
-  setLoading(true);
 
-  try {
-    const { data, error } = await supabase
-      .from('cierre_caja')
-      .select('*')
-      .order('fecha_cierre', { ascending: false });
+  const mostrarToast = (mensaje, tipo = 'info') => {
+    setNotificacion({ visible: true, mensaje, tipo });
+  };
 
-    if (error) throw error;
+  // Auto-cerrar la notificación después de 4 segundos
+  useEffect(() => {
+    if (notificacion.visible) {
+      const timer = setTimeout(() => {
+        setNotificacion(prev => ({ ...prev, visible: false }));
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [notificacion.visible]);
 
-    console.log('Cierres de caja:', data);
+  const fetchCierresCaja = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('cierre_caja')
+        .select('*')
+        .order('fecha_cierre', { ascending: false });
 
-    setCierresCaja(data || []);
-  } catch (error) {
-    console.error('Error cargando cierres:', error);
-  } finally {
-    setLoading(false);
-  }
-};
-useEffect(() => {
-  fetchCierresCaja();
-}, []);
+      if (error) throw error;
+
+      setCierresCaja(data || []);
+    } catch (error) {
+      console.error('Error cargando cierres:', error);
+      mostrarToast("Error al conectar con la base de datos de auditoría", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCierresCaja();
+  }, []);
+
   // Lógica de Filtrado
   const cierresFiltrados = cierresCaja.filter(c => {
-    // Filtrado por Estado
-    // Determinamos el estado real basado en el valor de la diferencia
     let estadoCalculado = 'Cuadrado';
     if (c.diferencia < 0) estadoCalculado = 'Faltante';
     if (c.diferencia > 0) estadoCalculado = 'Sobrante';
@@ -58,7 +76,6 @@ useEffect(() => {
       return false;
     }
 
-    // Filtrado por Rango de Fechas (usa fecha_apertura)
     if (c.fecha_apertura) {
       const fechaCierreMs = new Date(c.fecha_apertura).getTime();
       if (fechaInicio && fechaCierreMs < new Date(fechaInicio).getTime()) return false;
@@ -69,7 +86,26 @@ useEffect(() => {
   });
 
   return (
-    <div className="p-6 bg-white dark:bg-[#141414] transition-colors">
+    <div className="p-6 bg-white dark:bg-[#141414] transition-colors relative">
+      
+      {/* NOTIFICACIÓN FLOTANTE (TOAST) */}
+      {notificacion.visible && (
+        <div className={`fixed bottom-5 right-5 z-[60] flex items-center gap-3 p-4 rounded-2xl shadow-2xl border backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 duration-300 ${
+          notificacion.tipo === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500' :
+          notificacion.tipo === 'warning' ? 'bg-yellow-600/10 border-yellow-600/30 text-yellow-600 dark:text-yellow-400' :
+          'bg-red-500/10 border-red-500/30 text-red-500'
+        }`}>
+          {notificacion.tipo === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+          <p className="text-sm font-medium">{notificacion.mensaje}</p>
+          <button 
+            type="button"
+            onClick={() => setNotificacion(prev => ({ ...prev, visible: false }))} 
+            className="ml-2 p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
       
       {/* SECCIÓN DE FILTROS SUPERIORES */}
       <div className="mb-6 p-4 bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 rounded-sm flex flex-wrap gap-6 items-center">
@@ -137,15 +173,12 @@ useEffect(() => {
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-sm">
             {loading ? (
-  <tr>
-    <td
-      colSpan="6"
-      className="p-8 text-center text-xs uppercase tracking-widest opacity-40"
-    >
-      Cargando cierres de caja...
-    </td>
-  </tr>
-) : cierresFiltrados.length === 0 ? (
+              <tr>
+                <td colSpan="6" className="p-8 text-center text-xs uppercase tracking-widest opacity-40">
+                  Cargando cierres de caja...
+                </td>
+              </tr>
+            ) : cierresFiltrados.length === 0 ? (
               <tr>
                 <td colSpan="6" className="p-8 text-center text-xs uppercase tracking-widest opacity-40">
                   No se encontraron datos
@@ -153,7 +186,6 @@ useEffect(() => {
               </tr>
             ) : (
               cierresFiltrados.map((c) => {
-                // Cálculo de Badge dinámico basado en la diferencia de la fila
                 let badgeEstilo = "bg-emerald-500/10 text-emerald-400";
                 let textoEstado = "Cuadrado";
 
@@ -203,8 +235,8 @@ useEffect(() => {
 
       {/* MODAL / DETALLE DE "VER MÁS" */}
       {cierreSeleccionado && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fadeIn">
-          <div className="bg-white dark:bg-[#111111] border border-gray-200 dark:border-gray-800 w-full max-w-lg shadow-2xl rounded-sm overflow-hidden">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#111111] border border-gray-200 dark:border-gray-800 w-full max-w-lg shadow-2xl rounded-sm overflow-hidden animate-in zoom-in-95 duration-200">
             
             {/* Cabecera del Detalle */}
             <div className="p-4 bg-gray-50 dark:bg-[#181818] border-b border-gray-200 dark:border-gray-800 flex justify-between items-center">

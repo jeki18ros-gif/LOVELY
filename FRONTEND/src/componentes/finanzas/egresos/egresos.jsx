@@ -9,7 +9,7 @@ import {
   X,
   Edit2
 } from 'lucide-react';
-import { supabase } from '../../lib/supabase'; 
+import { supabase } from '../../../lib/supabase'; 
 
 const Egresos = () => {
   const theme = {
@@ -18,10 +18,18 @@ const Egresos = () => {
     goldBorder: 'border-[#D4AF37]',
   };
 
+  // Función auxiliar para obtener la fecha actual en formato YYYY-MM-DD (Local)
+  const getFechaActualLocal = () => {
+    const tzoffset = (new Date()).getTimezoneOffset() * 60000; 
+    const localISOTime = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
+    return localISOTime;
+  };
+
   // ESTADOS PARA DATOS Y FILTROS
   const [egresos, setEgresos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filtroFecha, setFiltroFecha] = useState('');
+  // Inicializamos directamente con la fecha de hoy
+  const [filtroFecha, setFiltroFecha] = useState(getFechaActualLocal());
   const [filtroCategoria, setFiltroCategoria] = useState('Todos');
 
   // ESTADOS PARA EL MODAL DE NUEVO EGRESO
@@ -78,7 +86,7 @@ const Egresos = () => {
             monto: parseFloat(nuevoMonto),
             categoria: nuevaCat,
             descripcion: nuevaDesc,
-            metodo_pago: nuevoMetodo // Sincronizado con tu BD (metodo_pago)
+            metodo_pago: nuevoMetodo 
           }
         ]);
 
@@ -137,7 +145,8 @@ const Egresos = () => {
   // 3. FILTROS EN CLIENTE
   // ==========================================
   const limpiarFiltros = () => {
-    setFiltroFecha('');
+    // Al limpiar filtros, restablecemos el calendario al día de hoy
+    setFiltroFecha(getFechaActualLocal());
     setFiltroCategoria('Todos');
   };
 
@@ -148,9 +157,9 @@ const Egresos = () => {
   });
 
   // ==========================================
-  // 4. CÁLCULO DE LAS TARJETAS (RESUMEN)
+  // 4. CÁLCULO DE LAS TARJETAS (RESUMEN SINCRONIZADO)
   // ==========================================
-  const totales = egresos.reduce((acc, item) => {
+  const totales = egresosFiltrados.reduce((acc, item) => {
     const montoNum = Number(item.monto || 0);
     acc.total += montoNum;
 
@@ -158,6 +167,8 @@ const Egresos = () => {
       acc.productos += montoNum;
     } else if (item.categoria === 'Pagos de Servicios' || item.categoria === 'Materiales') {
       acc.servicios += montoNum;
+    } else if (item.categoria === 'Imprevistos' || item.categoria === 'Devoluciones') {
+      acc.otros += montoNum; 
     } else {
       acc.otros += montoNum; 
     }
@@ -244,7 +255,7 @@ const Egresos = () => {
         </div>
       </div>
 
-      {/* Tabla Conectada */}
+      {/* Tabla */}
       <div className="bg-white dark:bg-[#141414] rounded-sm overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-800">
         {loading ? (
           <div className="p-10 text-center uppercase tracking-widest text-sm opacity-50">Cargando base de datos...</div>
@@ -263,18 +274,22 @@ const Egresos = () => {
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {egresosFiltrados.map((row) => {
                 const esImprevisto = row.categoria === 'Imprevistos';
+                const esDevolucion = row.categoria === 'Devoluciones';
+                
                 return (
                   <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-[#1a1a1a] transition-colors group">
                     <td className="p-4 text-sm font-light">
-                      {new Date(row.fecha).toLocaleDateString('es-PE', {
+                      {row.fecha ? new Date(row.fecha).toLocaleDateString('es-PE', {
                         year: 'numeric',
                         month: '2-digit',
                         day: '2-digit'
-                      })}
+                      }) : '---'}
                     </td>
                     <td className="p-4 text-sm">
                       <span className={`px-2 py-1 rounded-full text-[10px] uppercase ${
-                        esImprevisto ? 'bg-rose-900/20 text-rose-400' : 'bg-amber-900/20 text-amber-400'
+                        esImprevisto ? 'bg-rose-900/20 text-rose-400' : 
+                        esDevolucion ? 'bg-gray-900/40 text-gray-400 dark:text-gray-300' :
+                        'bg-amber-900/20 text-amber-400'
                       }`}>
                         {row.categoria}
                       </span>
@@ -284,7 +299,7 @@ const Egresos = () => {
                       {row.descripcion}
                     </td>
                     <td className="p-4 text-sm font-bold text-right text-rose-500 dark:text-rose-400">
-                      - S/ {Number(row.monto).toFixed(2)}
+                      - S/ {window.isNaN(Number(row.monto)) ? "0.00" : Number(row.monto).toFixed(2)}
                     </td>
                     <td className="p-4 text-sm font-light italic">{row.metodo_pago}</td>
                     
