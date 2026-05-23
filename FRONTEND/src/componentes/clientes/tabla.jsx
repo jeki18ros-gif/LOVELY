@@ -3,7 +3,6 @@ import { Pencil, Trash2, Eye, AlertTriangle } from 'lucide-react';
 import FormularioVer from "./formularios/formularioVer";
 import FormularioEditar from "./formularios/formularioEditar";
 
-// Colores de frecuencia adaptados para mantener coherencia con el ecosistema dorado/premium
 const getFrecuenciaColor = (frecuencia) => {
   switch (frecuencia) {
     case 'Frecuente': return 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30';
@@ -33,7 +32,6 @@ const ClienteTable = ({
   };
 
   const eliminarCliente = async (id) => {
-    // Nota: Asegúrate de que 'supabase' esté importado o disponible en este scope si usas este método
     const { error } = await supabase
       .from('clientes')
       .delete()
@@ -68,23 +66,15 @@ const ClienteTable = ({
   }, [filters, listaClientes]);
 
   return (
-    <div className="w-full text-gray-800 dark:text-gray-300 font-sans">
-      {/* CONTENEDOR PRINCIPAL: Bordes redondeados de diseño 3xl y sombras premium */}
+    // Agregamos la clase relative y un z-index base seguro al contenedor inicial de todo el componente
+    <div className="w-full text-gray-800 dark:text-gray-300 font-sans relative z-10">
+      
+      {/* CONTENEDOR PRINCIPAL CON OVERFLOW (SÓLO ENCAPSULA LA TABLA) */}
       <div className="w-full overflow-hidden rounded-b-3xl border-x border-b border-amber-500/20 bg-white dark:bg-[#0b0b0b] shadow-2xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              {/* HEADER DE TABLA DORADO SEMITRANSPARENTE */}
-              <tr className="
-text-amber-700 dark:text-amber-300
-text-xs uppercase tracking-[0.18em]
-border-b border-amber-500/20
-bg-gradient-to-r
-from-amber-500/10
-via-yellow-400/5
-to-amber-500/10
-backdrop-blur-xl
-">
+              <tr className="text-amber-700 dark:text-amber-300 text-xs uppercase tracking-[0.18em] border-b border-amber-500/20 bg-gradient-to-r from-amber-500/10 via-yellow-400/5 to-amber-500/10 backdrop-blur-xl">
                 <th className="px-6 py-4 font-bold">Nombre</th>
                 <th className="px-6 py-4 text-center font-bold">Teléfono</th>
                 <th className="px-6 py-4 text-center font-bold">Frecuencia</th>
@@ -96,13 +86,7 @@ backdrop-blur-xl
               {clientesFiltrados.map((cliente) => (
                 <tr 
                   key={cliente.id} 
-                  className="
-hover:bg-gradient-to-r
-hover:from-amber-500/10
-hover:to-yellow-500/5
-transition-all duration-300
-group
-"
+                  className="hover:bg-gradient-to-r hover:from-amber-500/10 hover:to-yellow-500/5 transition-all duration-300 group"
                 >
                   <td className="px-6 py-4 text-sm font-semibold text-black dark:text-gray-100">{cliente.nombre}</td>
                   <td className="px-6 py-4 text-sm text-center font-medium font-mono">{cliente.telefono || '---'}</td>
@@ -113,7 +97,6 @@ group
                   </td>
                   <td className="px-6 py-4 text-sm text-center font-bold text-amber-600 dark:text-amber-400">{cliente.visitas}</td>
                   
-                  {/* BOTONES DE ACCIÓN ESTILIZADOS EN RECUADROS DORADOS */}
                   <td className="px-6 py-4 text-center">
                     <div className="flex justify-center gap-2">
                       <button 
@@ -150,7 +133,10 @@ group
         </div>
       </div>
 
-      {/* --- MODALES --- */}
+      {/* === MODALES EXTRAÍDOS ===
+        Al renderizarlos aquí, totalmente fuera del div con overflow-hidden, 
+        el navegador les otorga la capa fixed sobre toda la pantalla sin restricciones físicas.
+      */}
       <FormularioVer 
         isOpen={modalType === 'ver'} 
         onClose={cerrarModal} 
@@ -167,9 +153,9 @@ group
         }}
       />
 
-      {/* MODAL DE CONFIRMACIÓN DE BORRADO ESTILIZADO */}
+      {/* MODAL DE CONFIRMACIÓN DE BORRADO */}
       {modalType === 'borrar' && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
           <div className="bg-white dark:bg-[#0f0f0f] w-full max-w-sm rounded-3xl p-6 border border-red-500/20 shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center text-red-500 mb-4">
