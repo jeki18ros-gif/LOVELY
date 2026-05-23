@@ -67,7 +67,7 @@ const ProductList = ({
           .from('producto')
           .select(`
             *,
-            stock,  // <--- AGREGADO: Nos aseguramos de traer el stock explícitamente
+            stock,
             categorias (
               id,
               nombre

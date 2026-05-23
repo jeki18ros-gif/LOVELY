@@ -71,7 +71,7 @@ const ServiceList = ({
               nombre
             )
           `)
-          .eq('estado', true); // <--- CORRECCIÓN AQUÍ: Solo trae servicios activos
+          .eq('estado', true);
 
       // Buscar
       if (busqueda.trim()) {
