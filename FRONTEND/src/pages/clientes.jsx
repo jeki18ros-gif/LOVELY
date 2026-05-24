@@ -298,55 +298,26 @@ shadow-[0_10px_40px_rgba(251,191,36,0.08)]
 overflow-hidden
 ">
 
-          <ClientesTable
-            filters={
-              filters
-            }
+<ClientesTable
+  filters={filters}
+  listaClientes={listaClientes}
+  setListaClientes={setListaClientes}
+  actualizarCliente={actualizarCliente}
 
-            listaClientes={
-              listaClientes
-            }
-
-            setListaClientes={
-              setListaClientes
-            }
-
-            actualizarCliente={
-              actualizarCliente
-            }
-
-            abrirModal={(
-              tipo,
-              cliente
-            ) => {
-              setClienteSeleccionado(
-                cliente
-              );
-
-              setModalType(
-                tipo
-              );
-            }}
-          />
+  abrirModal={(tipo, cliente) => {
+    setClienteSeleccionado(cliente);
+    setModalType(tipo);
+  }}
+/>
 
         </main>
-
       </div>
-
       <FormularioCliente
         isOpen={
-          isModalOpen
-        }
-        onClose={() =>
-          setIsModalOpen(
-            false
-          )
-        }
-        onSubmit={
-          handleSaveCliente
-        }
+          isModalOpen}
+        onClose={() => setIsModalOpen( false)}
+        onSubmit={ handleSaveCliente }
       />
-
       <FormularioVer
         isOpen={
           modalType ===
@@ -384,7 +355,54 @@ overflow-hidden
             )
         }
       />
+{modalType === 'borrar' && (
+  <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
 
+    <div className="bg-white dark:bg-[#0f0f0f] w-full max-w-sm rounded-3xl p-6 border border-red-500/20 shadow-2xl">
+
+      <h3 className="text-xl font-bold mb-3 text-black dark:text-white">
+        ¿Eliminar cliente?
+      </h3>
+
+      <p className="text-sm text-gray-500 mb-6">
+        ¿Seguro que deseas eliminar a{" "}
+        <span className="font-bold text-red-500">
+          {clienteSeleccionado?.nombre}
+        </span>?
+      </p>
+
+      <div className="flex gap-3">
+
+        <button
+          onClick={cerrarModal}
+          className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-zinc-800"
+        >
+          Cancelar
+        </button>
+
+        <button
+          onClick={async () => {
+
+            const { error } = await supabase
+              .from('clientes')
+              .delete()
+              .eq('id', clienteSeleccionado.id);
+
+            if (!error) {
+              obtenerClientes();
+            }
+
+            cerrarModal();
+          }}
+          className="flex-1 py-3 rounded-xl bg-red-600 text-white"
+        >
+          Eliminar
+        </button>
+
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };

@@ -12,24 +12,13 @@ const getFrecuenciaColor = (frecuencia) => {
   }
 };
 
-const ClienteTable = ({ 
-  filters, 
-  listaClientes, 
+const ClienteTable = ({
+  filters,
+  listaClientes,
   setListaClientes,
-  actualizarCliente 
+  actualizarCliente,
+  abrirModal
 }) => {
-  const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
-  const [modalType, setModalType] = useState(null);
-
-  const cerrarModal = () => {
-    setModalType(null);
-    setClienteSeleccionado(null);
-  };
-
-  const abrirModal = (tipo, cliente) => {
-    setClienteSeleccionado(cliente);
-    setModalType(tipo);
-  };
 
   const eliminarCliente = async (id) => {
     const { error } = await supabase
@@ -132,49 +121,6 @@ const ClienteTable = ({
           </table>
         </div>
       </div>
-      <FormularioVer 
-        isOpen={modalType === 'ver'} 
-        onClose={cerrarModal} 
-        cliente={clienteSeleccionado} 
-      />
-
-      <FormularioEditar 
-        isOpen={modalType === 'editar'} 
-        onClose={cerrarModal} 
-        cliente={clienteSeleccionado}
-        onSubmit={(form) => {
-          actualizarCliente(clienteSeleccionado.id, form);
-          cerrarModal();
-        }}
-      />
-
-      {/* MODAL DE CONFIRMACIÓN DE BORRADO */}
-      {modalType === 'borrar' && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-white dark:bg-[#0f0f0f] w-full max-w-sm rounded-3xl p-6 border border-red-500/20 shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center text-red-500 mb-4">
-                <AlertTriangle size={32} />
-              </div>
-              <h3 className="text-xl font-bold text-black dark:text-white mb-2">¿Eliminar cliente?</h3>
-              <p className="text-gray-500 text-sm mb-6 px-2">
-                ¿Estás seguro de eliminar a <span className="text-amber-600 dark:text-amber-400 font-bold italic">"{clienteSeleccionado?.nombre}"</span>? Esta acción no se puede deshacer.
-              </p>
-              <div className="flex gap-3 w-full">
-                <button onClick={cerrarModal} className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-zinc-800 font-bold text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-zinc-700 transition">
-                  Cancelar
-                </button>
-                <button 
-                  onClick={() => eliminarCliente(clienteSeleccionado.id)} 
-                  className="flex-1 py-3 rounded-xl bg-red-600 text-white font-bold text-sm hover:bg-red-500 shadow-lg shadow-red-600/10 transition"
-                >
-                  Sí, eliminar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
