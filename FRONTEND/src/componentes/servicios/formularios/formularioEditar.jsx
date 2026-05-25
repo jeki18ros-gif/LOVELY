@@ -228,7 +228,11 @@ export default function FormularioEditar({
                 required
                 className="w-full rounded-2xl border border-yellow-500/20 bg-white dark:bg-[#121212] p-4 text-black dark:text-white outline-none transition focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/10"
               >
-                <option value="">Seleccionar duración</option>
+                 <option value="">Seleccionar duración</option>
+                <option value="5">5 minutos</option>
+                <option value="10">10 minutos</option>
+                <option value="15">15 minutos</option>
+                <option value="20">20 minutos</option>
                 <option value="30">30 minutos</option>
                 <option value="60">1 hora</option>
                 <option value="90">1 hora 30 min</option>
