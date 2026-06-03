@@ -52,8 +52,11 @@ const CierreCaja = () => {
   const fetchDatosDelDia = async () => {
     setLoading(true);
     try {
-      const inicioDia = `${fechaSeleccionada}T00:00:00.000Z`;
-      const finDia = `${fechaSeleccionada}T23:59:59.999Z`;
+      const inicioLocal = new Date(`${fechaSeleccionada}T00:00:00`);
+const finLocal = new Date(`${fechaSeleccionada}T23:59:59`);
+
+const inicioDia = inicioLocal.toISOString();
+const finDia = finLocal.toISOString();
 
       // A. Traer todos los pagos usando la columna correcta 'fecha'
       const { data: pagos, error: errorPagos } = await supabase
