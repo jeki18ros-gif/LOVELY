@@ -27,9 +27,15 @@ const Ingresos = () => {
   const [ingresos, setIngresos] = useState([]);
   const [loading, setLoading] = useState(true);
   // Ahora el filtro de fecha inicia con el día de hoy por defecto (YYYY-MM-DD)
-  const [filtroFecha, setFiltroFecha] = useState(
-    new Date().toISOString().split('T')[0]
-  );
+ const obtenerFechaHoyPeru = () => {
+  const hoy = new Date();
+  hoy.setMinutes(hoy.getMinutes() - hoy.getTimezoneOffset());
+  return hoy.toISOString().split('T')[0];
+};
+
+const [filtroFecha, setFiltroFecha] = useState(
+  obtenerFechaHoyPeru()
+);
   const [filtroTipo, setFiltroTipo] = useState('Todos');
   const [filtroMetodo, setFiltroMetodo] = useState('Todos');
 
@@ -78,11 +84,17 @@ const Ingresos = () => {
         `);
 
       // Si hay una fecha seleccionada, filtramos el día entero desde las 00:00:00 hasta las 23:59:59
-      if (filtroFecha) {
-        const inicioDia = `${filtroFecha}T00:00:00.000Z`;
-        const finDia = `${filtroFecha}T23:59:59.999Z`;
-        query = query.gte('fecha', inicioDia).lte('fecha', finDia);
-      }
+if (filtroFecha) {
+  const inicioLocal = new Date(`${filtroFecha}T00:00:00`);
+  const finLocal = new Date(`${filtroFecha}T23:59:59`);
+
+  const inicioDia = inicioLocal.toISOString();
+  const finDia = finLocal.toISOString();
+
+  query = query
+    .gte('fecha', inicioDia)
+    .lte('fecha', finDia);
+}
 
       const { data, error } = await query;
 
@@ -174,11 +186,11 @@ const Ingresos = () => {
   // ==========================================
   // FILTROS LOCALES (TIPO Y MÉTODO)
   // ==========================================
-  const limpiarFiltros = () => {
-    setFiltroFecha(new Date().toISOString().split('T')[0]); // Restablece al día de hoy
-    setFiltroTipo('Todos');
-    setFiltroMetodo('Todos');
-  };
+const limpiarFiltros = () => {
+  setFiltroFecha(obtenerFechaHoyPeru());
+  setFiltroTipo('Todos');
+  setFiltroMetodo('Todos');
+};
 
   const obtenerTipoReal = (item) => {
     if (!item.codigo_venta) return 'Extra';
