@@ -176,14 +176,14 @@ if (ventaActiva.productos.length > 0) {
           monto: Number(p.monto)
         }));
       } else {
-        pagos = [
-          {
-            codigo_venta: codigoVenta,
-            tipo: metodo,
-            descripcion: null,
-            monto: Number(montoPago || totalConComisionGeneral)
-          }
-        ];
+       pagos = [
+  {
+    codigo_venta: codigoVenta,
+    tipo: metodo,
+    descripcion: null,
+    monto: totalConComisionGeneral
+  }
+];
       }
 
       const { error: pagoError } = await supabase.from('pago').insert(pagos);
@@ -197,7 +197,18 @@ if (ventaActiva.productos.length > 0) {
       const comisionTotal = metodo === 'mixto' 
         ? resumenMixto.totalComisiones 
         : (metodo === 'tarjeta' ? (total * 0.05) : 0);
+const montoRecibido =
+  metodo === 'mixto'
+    ? resumenMixto.totalCobrado
+    : Number(montoPago);
 
+const vuelto =
+  metodo === 'mixto'
+    ? resumenMixto.excedente
+    : Math.max(
+        0,
+        Number(montoPago || 0) - totalConComisionGeneral
+      );
       const infoBoleta = {
         nombreCliente: nombre_cliente,
         fecha: new Date().toLocaleDateString('es-PE', {
@@ -217,7 +228,9 @@ if (ventaActiva.productos.length > 0) {
         subtotal: subtotal,
         descuento: descuento,
         comision: comisionTotal,
-        totalFinal: metodo === 'mixto' ? (total + comisionTotal) : totalConComisionGeneral
+        totalFinal: metodo === 'mixto' ? (total + comisionTotal) : totalConComisionGeneral,
+        montoRecibido,
+  vuelto
       };
 
       const doc = <BoletaPDF data={infoBoleta} />;

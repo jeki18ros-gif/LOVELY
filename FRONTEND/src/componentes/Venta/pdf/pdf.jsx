@@ -153,24 +153,38 @@ export const BoletaPDF = ({ data }) => {
         {/* Totales */}
         <View style={styles.totalsContainer}>
           <View style={styles.totalsBox}>
-            <div style={styles.totalRow}>
+            <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Subtotal Neto:</Text>
               <Text style={styles.totalValue}>S/ {Number(data.subtotal).toFixed(2)}</Text>
-            </div>
+            </View>
+            <View style={styles.totalRow}>
+  <Text style={styles.totalLabel}>Monto Recibido:</Text>
+  <Text style={styles.totalValue}>
+    S/ {Number(data.montoRecibido).toFixed(2)}
+  </Text>
+</View>
+{data.vuelto > 0 && (
+  <View style={styles.totalRow}>
+    <Text style={styles.totalLabel}>Vuelto:</Text>
+    <Text style={styles.totalValue}>
+      S/ {Number(data.vuelto).toFixed(2)}
+    </Text>
+  </View>
+)}
             {data.descuento > 0 && (
-              <div style={styles.totalRow}>
+              <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>Descuento:</Text>
                 <Text style={styles.totalValue}>- S/ {Number(data.descuento).toFixed(2)}</Text>
-              </div>
+              </View>
             )}
             {data.comision > 0 && (
-              <div style={styles.totalRow}>
+              <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>Recargo Tarjeta:</Text>
                 <Text style={styles.totalValue}>S/ {Number(data.comision).toFixed(2)}</Text>
-              </div>
+              </View>
             )}
             <View style={styles.grandTotalRow}>
-              <Text style={styles.grandTotalLabel}>Total Pagado:</Text>
+              <Text style={styles.grandTotalLabel}>Total Venta:</Text>
               <Text style={styles.grandTotalValue}>S/ {Number(data.totalFinal).toFixed(2)}</Text>
             </View>
           </View>
