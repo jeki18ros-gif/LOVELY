@@ -89,11 +89,13 @@ export default function Ventas() {
       return false;
     }
 
-    // Filtrar por Rango de Fechas
+// Filtrar por Rango de Fechas (Corregido para evitar desfases de zona horaria)
     if (v.fecha) {
-      const fechaVentaMs = new Date(v.fecha).getTime();
-      if (fechaInicio && fechaVentaMs < new Date(fechaInicio).getTime()) return false;
-      if (fechaFin && fechaVentaMs > new Date(fechaFin + 'T23:59:59').getTime()) return false;
+      // Extraemos solo la parte 'YYYY-MM-DD' de la fecha de la base de datos
+      const fechaVentaTexto = v.fecha.split('T')[0]; 
+
+      if (fechaInicio && fechaVentaTexto < fechaInicio) return false;
+      if (fechaFin && fechaVentaTexto > fechaFin) return false;
     }
 
     return true;
