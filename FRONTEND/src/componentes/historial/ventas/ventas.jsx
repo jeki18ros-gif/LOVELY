@@ -89,13 +89,22 @@ export default function Ventas() {
       return false;
     }
 
-// Filtrar por Rango de Fechas (Corregido para evitar desfases de zona horaria)
+// Filtrar por Rango de Fechas (Corregido con Zona Horaria Local)
     if (v.fecha) {
-      // Extraemos solo la parte 'YYYY-MM-DD' de la fecha de la base de datos
-      const fechaVentaTexto = v.fecha.split('T')[0]; 
+      // 1. Creamos el objeto Date con la fecha de la BD
+      const fechaObjeto = new Date(v.fecha);
 
-      if (fechaInicio && fechaVentaTexto < fechaInicio) return false;
-      if (fechaFin && fechaVentaTexto > fechaFin) return false;
+      // 2. Extraemos año, mes y día en la zona horaria del navegador del usuario
+      const anio = fechaObjeto.getFullYear();
+      const mes = String(fechaObjeto.getMonth() + 1).padStart(2, '0'); // Los meses van de 0 a 11
+      const dia = String(fechaObjeto.getDate()).padStart(2, '0');
+
+      // 3. Formateamos como 'YYYY-MM-DD' local
+      const fechaVentaLocalTexto = `${anio}-${mes}-${dia}`;
+
+      // 4. Comparamos los strings de forma segura
+      if (fechaInicio && fechaVentaLocalTexto < fechaInicio) return false;
+      if (fechaFin && fechaVentaLocalTexto > fechaFin) return false;
     }
 
     return true;
