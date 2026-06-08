@@ -62,6 +62,7 @@ const Productos = () => {
           nombre: data.nombre,
           descripcion: data.descripcion,
           precio: Number(data.precio),
+          costo: Number(data.costo),
           stock: Number(data.stock),
           categoria_id: data.categoria_id,
           estado: data.estado,

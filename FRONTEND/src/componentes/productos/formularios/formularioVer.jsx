@@ -29,6 +29,16 @@ export default function FormularioVer({ isOpen, onClose, product }) {
     currency: "PEN",
   }).format(product.precio || 0);
 
+  const costoFormateado = new Intl.NumberFormat("es-PE", {
+    style: "currency",
+    currency: "PEN",
+  }).format(product.costo || 0);
+
+  const gananciaFormateada = new Intl.NumberFormat("es-PE", {
+    style: "currency",
+    currency: "PEN",
+  }).format((product.precio || 0) - (product.costo || 0));
+
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden rounded-3xl border border-amber-500/30 bg-white dark:bg-[#0b0b0b] shadow-2xl">
@@ -91,8 +101,23 @@ export default function FormularioVer({ isOpen, onClose, product }) {
             </div>
           </div>
 
-          {/* PRECIO Y STOCK */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* COSTO, PRECIO Y GANANCIA */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* COSTO */}
+            <div className="rounded-2xl p-5 border border-amber-500/20 bg-white dark:bg-white/[0.03] shadow-sm">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 rounded-xl bg-amber-500/10">
+                  <DollarSign className="text-amber-600 dark:text-amber-400" size={20} />
+                </div>
+                <p className="text-xs uppercase font-bold tracking-wider text-gray-500">
+                  Costo
+                </p>
+              </div>
+              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                {costoFormateado}
+              </p>
+            </div>
+
             {/* PRECIO */}
             <div className="rounded-2xl p-5 border border-amber-500/20 bg-white dark:bg-white/[0.03] shadow-sm">
               <div className="flex items-center gap-3 mb-3">
@@ -103,25 +128,40 @@ export default function FormularioVer({ isOpen, onClose, product }) {
                   Precio
                 </p>
               </div>
-              <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">
+              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
                 {precioFormateado}
               </p>
             </div>
 
-            {/* STOCK */}
-            <div className="rounded-2xl p-5 border border-amber-500/20 bg-white dark:bg-white/[0.03] shadow-sm">
+            {/* GANANCIA */}
+            <div className="rounded-2xl p-5 border border-green-500/20 bg-green-50 dark:bg-green-500/5 shadow-sm">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-xl bg-amber-500/10">
-                  <Boxes className="text-amber-600 dark:text-amber-400" size={20} />
+                <div className="p-2 rounded-xl bg-green-500/10">
+                  <DollarSign className="text-green-600 dark:text-green-400" size={20} />
                 </div>
                 <p className="text-xs uppercase font-bold tracking-wider text-gray-500">
-                  Stock
+                  Ganancia
                 </p>
               </div>
-              <p className="text-2xl font-semibold text-black dark:text-white">
-                {product.stock} unidades
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                {gananciaFormateada}
               </p>
             </div>
+          </div>
+
+          {/* STOCK */}
+          <div className="rounded-2xl p-5 border border-amber-500/20 bg-white dark:bg-white/[0.03] shadow-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 rounded-xl bg-amber-500/10">
+                <Boxes className="text-amber-600 dark:text-amber-400" size={20} />
+              </div>
+              <p className="text-xs uppercase font-bold tracking-wider text-gray-500">
+                Stock
+              </p>
+            </div>
+            <p className="text-2xl font-semibold text-black dark:text-white">
+              {product.stock} unidades
+            </p>
           </div>
 
           {/* DESCRIPCIÓN */}

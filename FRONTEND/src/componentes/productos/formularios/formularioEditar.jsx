@@ -24,6 +24,7 @@ export default function FormularioEditar({
   const [form, setForm] = useState({
     nombre: "",
     precio: "",
+    costo: "",
     stock: "",
     categoria_id: "",
     descripcion: "",
@@ -39,6 +40,7 @@ export default function FormularioEditar({
       setForm({
         nombre: product.nombre || "",
         precio: product.precio || "",
+        costo: product.costo || "",
         stock: product.stock || "",
         categoria_id: product.categoria_id || "",
         descripcion: product.descripcion || "",
@@ -84,6 +86,7 @@ export default function FormularioEditar({
     if (
       !form.nombre.trim() ||
       !form.precio ||
+      !form.costo ||
       !form.stock ||
       !form.categoria_id ||
       !form.descripcion.trim()
@@ -122,6 +125,7 @@ export default function FormularioEditar({
       await onSubmit({
         ...form,
         precio: Number(form.precio),
+        costo: Number(form.costo),
         stock: Math.floor(Number(form.stock)),
         imagen_url: finalImagenUrl
       });
@@ -209,8 +213,26 @@ export default function FormularioEditar({
             />
           </div>
 
-          {/* PRECIO + STOCK */}
+          {/* COSTO + PRECIO */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                <DollarSign size={16} className="text-amber-500" />
+                Costo <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                name="costo"
+                step="0.01"
+                min="0"
+                value={form.costo}
+                onChange={handleChange}
+                disabled={loading}
+                required
+                className="w-full rounded-2xl border border-amber-500/20 bg-white dark:bg-white/[0.03] p-4 text-black dark:text-white outline-none focus:border-amber-500 transition disabled:opacity-50"
+              />
+            </div>
+
             <div>
               <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
                 <DollarSign size={16} className="text-amber-500" />
@@ -228,23 +250,42 @@ export default function FormularioEditar({
                 className="w-full rounded-2xl border border-amber-500/20 bg-white dark:bg-white/[0.03] p-4 text-black dark:text-white outline-none focus:border-amber-500 transition disabled:opacity-50"
               />
             </div>
+          </div>
 
-            <div>
-              <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
-                <Boxes size={16} className="text-amber-500" />
-                Stock <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                name="stock"
-                min="0"
-                value={form.stock}
-                onChange={handleChange}
-                disabled={loading}
-                required
-                className="w-full rounded-2xl border border-amber-500/20 bg-white dark:bg-white/[0.03] p-4 text-black dark:text-white outline-none focus:border-amber-500 transition disabled:opacity-50"
-              />
-            </div>
+          {/* GANANCIA CALCULADA */}
+          <div>
+            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+              <DollarSign size={16} className="text-green-500" />
+              Ganancia
+            </label>
+            <input
+              type="text"
+              value={
+                form.precio && form.costo
+                  ? `S/ ${(Number(form.precio) - Number(form.costo)).toFixed(2)}`
+                  : "S/ 0.00"
+              }
+              disabled
+              className="w-full rounded-2xl border border-green-500/20 bg-green-50 dark:bg-green-500/5 p-4 text-green-700 dark:text-green-400 font-bold outline-none"
+            />
+          </div>
+
+          {/* STOCK */}
+          <div>
+            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+              <Boxes size={16} className="text-amber-500" />
+              Stock <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              name="stock"
+              min="0"
+              value={form.stock}
+              onChange={handleChange}
+              disabled={loading}
+              required
+              className="w-full rounded-2xl border border-amber-500/20 bg-white dark:bg-white/[0.03] p-4 text-black dark:text-white outline-none focus:border-amber-500 transition disabled:opacity-50"
+            />
           </div>
 
           {/* IMAGEN */}

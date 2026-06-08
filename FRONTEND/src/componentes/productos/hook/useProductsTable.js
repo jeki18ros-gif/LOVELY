@@ -308,6 +308,7 @@ const { data } = supabase.storage
       nombre: updatedData.nombre,
       descripcion: updatedData.descripcion,
       precio: Number(updatedData.precio),
+      costo: Number(updatedData.costo),
       stock: Number(updatedData.stock),
       categoria_id: updatedData.categoria_id,
       imagen_url

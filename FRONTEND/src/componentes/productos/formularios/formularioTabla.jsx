@@ -7,6 +7,7 @@ export default function FormularioT({ isOpen, onClose, onSubmit, categorias = []
   const [form, setForm] = useState({
     nombre: "",
     precio: "",
+    costo: "",
     stock: "",
     categoria_id: "",
     descripcion: "",
@@ -49,6 +50,7 @@ export default function FormularioT({ isOpen, onClose, onSubmit, categorias = []
       !form.nombre.trim() ||
       !form.descripcion.trim() ||
       !form.precio ||
+      !form.costo ||
       !form.categoria_id ||
       !form.stock ||
       !form.imagen
@@ -82,6 +84,7 @@ export default function FormularioT({ isOpen, onClose, onSubmit, categorias = []
         ...form,
         stock: Math.floor(Number(form.stock)),
         precio: Number(form.precio),
+        costo: Number(form.costo),
         estado: form.estado === "activo",
         imagen_url: imagenUrl
       });
@@ -93,6 +96,7 @@ export default function FormularioT({ isOpen, onClose, onSubmit, categorias = []
         nombre: "",
         descripcion: "",
         precio: "",
+        costo: "",
         categoria_id: "",
         estado: "activo",
         stock: "",
@@ -223,8 +227,27 @@ export default function FormularioT({ isOpen, onClose, onSubmit, categorias = []
             />
           </div>
 
-          {/* Precio y Stock */}
+          {/* Costo y Precio */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                <DollarSign size={16} className="text-yellow-500" />
+                Costo (S/) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                name="costo"
+                value={form.costo}
+                onChange={handleChange}
+                required
+                min="0"
+                step="0.01"
+                disabled={loading}
+                placeholder="Ej: 45.50"
+                className="w-full rounded-2xl border border-yellow-500/20 bg-white dark:bg-white/[0.03] p-4 text-black dark:text-white outline-none transition focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/10 disabled:opacity-50"
+              />
+            </div>
+
             <div>
               <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
                 <DollarSign size={16} className="text-yellow-500" />
@@ -243,24 +266,43 @@ export default function FormularioT({ isOpen, onClose, onSubmit, categorias = []
                 className="w-full rounded-2xl border border-yellow-500/20 bg-white dark:bg-white/[0.03] p-4 text-black dark:text-white outline-none transition focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/10 disabled:opacity-50"
               />
             </div>
+          </div>
 
-            <div>
-              <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
-                <Package size={16} className="text-yellow-500" />
-                Stock Disponible <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                name="stock"
-                value={form.stock}
-                onChange={handleChange}
-                required
-                min="0"
-                disabled={loading}
-                placeholder="Ej: 24"
-                className="w-full rounded-2xl border border-yellow-500/20 bg-white dark:bg-white/[0.03] p-4 text-black dark:text-white outline-none transition focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/10 disabled:opacity-50"
-              />
-            </div>
+          {/* Ganancia Calculada */}
+          <div>
+            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+              <DollarSign size={16} className="text-green-500" />
+              Ganancia (S/)
+            </label>
+            <input
+              type="text"
+              value={
+                form.precio && form.costo
+                  ? `S/ ${(Number(form.precio) - Number(form.costo)).toFixed(2)}`
+                  : "S/ 0.00"
+              }
+              disabled
+              className="w-full rounded-2xl border border-green-500/20 bg-green-50 dark:bg-green-500/5 p-4 text-green-700 dark:text-green-400 font-bold outline-none"
+            />
+          </div>
+
+          {/* Stock */}
+          <div>
+            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+              <Package size={16} className="text-yellow-500" />
+              Stock Disponible <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              name="stock"
+              value={form.stock}
+              onChange={handleChange}
+              required
+              min="0"
+              disabled={loading}
+              placeholder="Ej: 24"
+              className="w-full rounded-2xl border border-yellow-500/20 bg-white dark:bg-white/[0.03] p-4 text-black dark:text-white outline-none transition focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/10 disabled:opacity-50"
+            />
           </div>
 
           {/* Categoría y Estado */}
