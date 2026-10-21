@@ -106,7 +106,7 @@ const SaleDetail = ({
                       </div>
                     </div>
                   </td>
-                  <td className="py-4 text-gray-600 dark:text-gray-400">S/ {item.precio}</td>
+                  <td className="py-4 text-gray-600 dark:text-gray-400"><span className="notranslate" translate="no">S/ {item.precio}</span></td>
                   <td className="py-4">
                     <div className="flex flex-col items-start gap-1">
                       <input
@@ -121,12 +121,12 @@ const SaleDetail = ({
                       {/* 3. Recordatorio visual de stock máximo debajo del input */}
                       {esProducto && (
                         <span className="text-[10px] text-gray-400 dark:text-zinc-500 whitespace-nowrap">
-                          Máx: {item.stock}
+                          <span className="notranslate" translate="no">Máx: {item.stock}</span>
                         </span>
                       )}
                     </div>
                   </td>
-                  <td className="py-4 font-semibold text-gray-800 dark:text-gray-200">S/ {totalItem.toFixed(2)}</td>
+                  <td className="py-4 font-semibold text-gray-800 dark:text-gray-200"><span className="notranslate" translate="no">S/ {totalItem.toFixed(2)}</span></td>
                   <td className="py-4">
                     <button
                       onClick={() => eliminarItem(item.id, item.tipo)}
@@ -177,15 +177,15 @@ const SaleDetail = ({
         <div className="w-full md:w-72 rounded-xl p-5 bg-zinc-100 dark:bg-zinc-900 space-y-3">
           <div className="flex justify-between text-sm">
             <span className="text-gray-500">Subtotal</span>
-            <span className="font-medium text-gray-800 dark:text-gray-200">S/ {subtotal.toFixed(2)}</span>
+            <span className="font-medium text-gray-800 dark:text-gray-200 notranslate" translate="no">S/ {subtotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-500">Descuento</span>
-            <span className="font-medium text-red-500">- S/ {descuento.toFixed(2)}</span>
+            <span className="font-medium text-red-500 notranslate" translate="no">- S/ {descuento.toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-xl font-bold pt-3 border-t border-gray-200 dark:border-zinc-700">
             <span className="text-gray-800 dark:text-white">TOTAL</span>
-            <span className="text-amber-600 dark:text-amber-500">S/ {total.toFixed(2)}</span>
+            <span className="text-amber-600 dark:text-amber-500 notranslate" translate="no">S/ {total.toFixed(2)}</span>
           </div>
         </div>
       </div>

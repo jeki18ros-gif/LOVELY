@@ -11,39 +11,34 @@ export default function FormularioEditar({ isOpen, onClose, onSubmit, cliente })
   });
 
   useEffect(() => {
+    let isMounted = true;
 
-  const cargarSeguimiento = async () => {
+    const cargarSeguimiento = async () => {
+      if (!cliente || !isOpen) return;
 
-    if (!cliente || !isOpen) return;
+      const { data: seguimientoData, error } = await supabase
+        .from('seguimiento')
+        .select('*')
+        .eq('id_cliente', cliente.id)
+        .eq('tipo', 'cliente')
+        .order('fecha', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-    const { data: seguimientoData } = await supabase
-      .from('seguimiento')
-      .select('*')
-      .eq('id_cliente', cliente.id)
-      .eq('tipo', 'cliente')
-      .order('fecha', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      if (error) console.error('Error cargando seguimiento del cliente:', error);
+      if (!isMounted) return;
 
-    setForm({
-      nombre: cliente.nombre || "",
-      numero: cliente.telefono === '—'
-        ? ""
-        : cliente.telefono,
+      setForm({
+        nombre: cliente.nombre || '',
+        numero: cliente.telefono === '—' ? '' : cliente.telefono,
+        correo: cliente.correo === '—' ? '' : cliente.correo,
+        seguimiento: seguimientoData?.nota || ''
+      });
+    };
 
-      correo: cliente.correo === '—'
-        ? ""
-        : cliente.correo,
-
-      seguimiento:
-        seguimientoData?.nota || ""
-    });
-
-  };
-
-  cargarSeguimiento();
-
-}, [cliente, isOpen]);
+    cargarSeguimiento();
+    return () => { isMounted = false; };
+  }, [cliente, isOpen]);
 
   if (!isOpen) return null;
 

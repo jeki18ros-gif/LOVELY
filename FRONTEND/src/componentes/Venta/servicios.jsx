@@ -35,6 +35,7 @@ const ServiceList = ({
 
   // Obtener categorías reales
   useEffect(() => {
+    let isMounted = true;
     const obtenerCategorias =
       async () => {
 
@@ -50,14 +51,16 @@ const ServiceList = ({
         return;
       }
 
-      setCategorias(data || []);
+      if (isMounted) setCategorias(data || []);
     };
 
     obtenerCategorias();
+    return () => { isMounted = false; };
   }, []);
 
   // Obtener servicios reales
   useEffect(() => {
+    let isMounted = true;
     const obtenerServicios =
       async () => {
 
@@ -101,10 +104,11 @@ const ServiceList = ({
         return;
       }
 
-      setServicios(data || []);
+      if (isMounted) setServicios(data || []);
     };
 
     obtenerServicios();
+    return () => { isMounted = false; };
   }, [
     busqueda,
     categoriaSeleccionada
@@ -215,13 +219,13 @@ const ServiceList = ({
               </div>
               <div className="flex flex-col">
                 <span className="text-sm font-medium">{serv.nombre}</span>
-                <span className="text-xs text-gray-500">{serv.duracion} min</span>
+                <span className="text-xs text-gray-500 notranslate" translate="no">{serv.duracion} min</span>
               </div>
             </div>
 
             {/* DERECHA */}
             <div className="flex items-center gap-4">
-              <span className="text-sm font-semibold">S/ {serv.precio}</span>
+              <span className="text-sm font-semibold notranslate" translate="no">S/ {serv.precio}</span>
               {/* CHECK */}
               <input
                 type="checkbox"

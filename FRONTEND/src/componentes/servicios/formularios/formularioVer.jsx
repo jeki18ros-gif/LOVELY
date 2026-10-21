@@ -107,7 +107,7 @@ export default function FormularioVer({ isOpen, onClose, service }) {
                 <p className="text-xs uppercase font-bold tracking-wider text-gray-500 dark:text-gray-400">Precio</p>
               </div>
               <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
-                s/ {service.precio}
+                <span className="notranslate" translate="no">S/ {service.precio}</span>
               </p>
             </div>
 
@@ -119,7 +119,7 @@ export default function FormularioVer({ isOpen, onClose, service }) {
                 <p className="text-xs uppercase font-bold tracking-wider text-gray-500 dark:text-gray-400">Duración</p>
               </div>
               <p className="text-2xl font-semibold text-black dark:text-white">
-                {service.duracion} min
+                <span className="notranslate" translate="no">{service.duracion} min</span>
               </p>
             </div>
           </div>

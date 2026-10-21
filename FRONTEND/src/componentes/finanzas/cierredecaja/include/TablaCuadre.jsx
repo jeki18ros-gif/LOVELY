@@ -37,7 +37,7 @@ export default function TablaCuadre({ metodos, valoresContados, onInputChange, b
                   {metodo} {metodo === 'efectivo' && Number(baseInicial) > 0 && <span className="text-[10px] text-blue-400 font-normal">(+Base)</span>}
                 </td>
                 <td className="p-4 text-right font-light">
-                  S/ {esperado.toFixed(2)}
+                  <span className="notranslate" translate="no">S/ {esperado.toFixed(2)}</span>
                 </td>
                 <td className="p-4 text-center">
                   <input
@@ -58,7 +58,7 @@ export default function TablaCuadre({ metodos, valoresContados, onInputChange, b
                       : 'text-rose-500'
                   }`}
                 >
-                  {dif === 0 ? 'S/ 0.00' : `${dif > 0 ? '+' : ''} S/ ${dif.toFixed(2)}`}
+                  <span className="notranslate" translate="no">{dif === 0 ? 'S/ 0.00' : `${dif > 0 ? '+' : ''} S/ ${dif.toFixed(2)}`}</span>
                 </td>
               </tr>
             );

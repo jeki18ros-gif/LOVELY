@@ -18,16 +18,19 @@ const ClientCard = ({ cliente, setCliente, clienteAnonimo, setClienteAnonimo }) 
 
   // Buscar clientes reales
   useEffect(() => {
+    let isMounted = true;
+
     const buscarClientes = async () => {
       if (!busqueda.trim() || clienteAnonimo) {
-        setClientes([]);
+        if (isMounted) setClientes([]);
         return;
       }
       const { data, error } = await supabase.from('clientes').select('*').ilike('nombre', `%${busqueda}%`).limit(5);
       if (error) { console.error(error); return; }
-      setClientes(data || []);
+      if (isMounted) setClientes(data || []);
     };
     buscarClientes();
+    return () => { isMounted = false; };
   }, [busqueda, clienteAnonimo]);
 
   return (

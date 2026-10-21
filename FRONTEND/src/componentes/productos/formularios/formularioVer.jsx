@@ -160,7 +160,7 @@ export default function FormularioVer({ isOpen, onClose, product }) {
               </p>
             </div>
             <p className="text-2xl font-semibold text-black dark:text-white">
-              {product.stock} unidades
+              <span className="notranslate" translate="no">{product.stock} unidades</span>
             </p>
           </div>
 

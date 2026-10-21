@@ -85,7 +85,7 @@ const FormularioCita = ({ isOpen, onClose, onSubmit }) => {
                   {serviciosFiltrados.map(servicio => (
                     <button key={servicio.id} type="button" onClick={() => seleccionarServicio(servicio)} className="w-full p-3 text-left hover:bg-yellow-50 dark:hover:bg-zinc-800 border-b border-zinc-100 dark:border-zinc-800 text-sm dark:text-white flex justify-between">
                       <span>{servicio.nombre}</span>
-                      <span className="text-yellow-600 font-bold">S/ {servicio.precio}</span>
+                      <span className="text-yellow-600 font-bold notranslate" translate="no">S/ {servicio.precio}</span>
                     </button>
                   ))}
                 </div>

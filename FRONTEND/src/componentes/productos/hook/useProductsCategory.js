@@ -80,17 +80,42 @@ const useProductsCategory = (onCategoriaChange) => {
      CARGAR TODO
   ========================= */
 
-  const cargarTodo = async () => {
-
-    await obtenerCategorias();
-
-    setTimeout(() => {
-      obtenerCantidadPorCategoria();
-    }, 100);
-  };
-
   useEffect(() => {
-    cargarTodo();
+    let isMounted = true;
+
+    const cargarDatosIniciales = async () => {
+      const [categoriasResult, productosResult] = await Promise.all([
+        supabase.from('categorias').select('*').eq('tipo', 'producto'),
+        supabase.from('producto').select('categoria_id')
+      ]);
+
+      if (!isMounted) return;
+      if (categoriasResult.error) {
+        console.error(categoriasResult.error);
+        return;
+      }
+      if (productosResult.error) {
+        console.error(productosResult.error);
+        return;
+      }
+
+      const conteo = (productosResult.data || []).reduce((resultado, item) => {
+        resultado[item.categoria_id] = (resultado[item.categoria_id] || 0) + 1;
+        return resultado;
+      }, {});
+      const listaCategorias = productosResult.data || [];
+      setCategorias([
+        { id: 0, nombre: 'Todos', cantidad: listaCategorias.length, activo: true },
+        ...(categoriasResult.data || []).map((categoria) => ({
+          ...categoria,
+          cantidad: conteo[categoria.id] || 0,
+          activo: false
+        }))
+      ]);
+    };
+
+    cargarDatosIniciales();
+    return () => { isMounted = false; };
   }, []);
 
   /* =========================

@@ -49,7 +49,7 @@ const ServiceTable = ({ filters, categoriaSeleccionada, refresh, categorias }) =
                   <td className="px-6 py-4 text-sm text-center font-bold text-amber-600 dark:text-amber-400">
                     {new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(service.precio || 0)}
                   </td>
-                  <td className="px-6 py-4 text-sm text-center font-medium">{service.duracion} min</td>
+                  <td className="px-6 py-4 text-sm text-center font-medium"><span className="notranslate" translate="no">{service.duracion} min</span></td>
                   <td className="px-6 py-4 text-center">
                     <span className={`px-3 py-1 rounded-xl text-xs font-bold border border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400 ${service.categoryColor}`}>
                       {service.categoria}
@@ -110,7 +110,7 @@ const ServiceTable = ({ filters, categoriaSeleccionada, refresh, categorias }) =
         {/* PAGINACIÓN */}
         <div className="px-6 py-4 flex items-center justify-between border-t border-amber-500/10 bg-amber-500/[0.01] dark:bg-zinc-900/20">
           <p className="text-xs text-amber-700 dark:text-amber-500/60 uppercase tracking-widest font-bold">
-            Total: {filteredServices.length} resultados
+            Total: <span className="notranslate" translate="no">{filteredServices.length}</span> resultados
           </p>
           <div className="flex items-center gap-3">
             <button 

@@ -46,7 +46,7 @@ const CierreCaja = () => {
   };
 
   useEffect(() => {
-    let cancelado = false;
+    let isMounted = true;
 
     const cargarDatos = async () => {
       setLoading(true);
@@ -114,7 +114,7 @@ const CierreCaja = () => {
 
         const cierreExistente = (cierresData || []).find(c => c.fecha_cierre && c.fecha_cierre.startsWith(fechaSeleccionada));
 
-        if (!cancelado) {
+        if (isMounted) {
           const ingresoTotalCalculado = sumaIngresosVentas + sumaIngresosExtras;
           
           setDatosSistema({
@@ -141,12 +141,12 @@ const CierreCaja = () => {
         }
       } catch (error) {
         console.error('Error cargando datos de cierre:', error.message);
-        if (!cancelado) setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     cargarDatos();
-    return () => { cancelado = true; };
+    return () => { isMounted = false; };
   }, [fechaSeleccionada]);
 
   // CÁLCULOS GLOBALES

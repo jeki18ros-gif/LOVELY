@@ -343,7 +343,7 @@ const Ingresos = () => {
               <card.icon className={theme.gold} size={20} />
             </div>
             <h2 className="text-2xl font-semibold tracking-tight">
-              S/ {card.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <span className="notranslate" translate="no">S/ {card.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </h2>
           </div>
         ))}
@@ -454,7 +454,7 @@ const Ingresos = () => {
                         : `Venta registrada de ${row.ventas?.nombre_cliente || 'Cliente'}`}
                     </td>
                     <td className={`p-4 text-sm font-semibold ${theme.gold}`}>
-                      S/ {Number(row.monto).toFixed(2)}
+                      <span className="notranslate" translate="no">S/ {Number(row.monto).toFixed(2)}</span>
                     </td>
                     <td className="p-4 text-sm font-light italic text-gray-600 dark:text-gray-400">
                       {row.tipo}
@@ -694,7 +694,7 @@ const Ingresos = () => {
                 {selectedIngreso.tipoReal === 'Extra' ? (
                   <div className="flex justify-between text-sm py-1">
                     <span className="opacity-70">Monto Único (Extra):</span>
-                    <span className="font-medium">S/ {Number(selectedIngreso.monto).toFixed(2)}</span>
+                    <span className="font-medium notranslate" translate="no">S/ {Number(selectedIngreso.monto).toFixed(2)}</span>
                   </div>
                 ) : (
                   <>
@@ -702,13 +702,13 @@ const Ingresos = () => {
                       <span className="opacity-70 flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-blue-500"></span> Por Servicios:
                       </span>
-                      <span className="font-medium">S/ {selectedIngreso.desgloseServicios.toFixed(2)}</span>
+                      <span className="font-medium notranslate" translate="no">S/ {selectedIngreso.desgloseServicios.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="opacity-70 flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Por Productos:
                       </span>
-                      <span className="font-medium">S/ {selectedIngreso.desgloseProductos.toFixed(2)}</span>
+                      <span className="font-medium notranslate" translate="no">S/ {selectedIngreso.desgloseProductos.toFixed(2)}</span>
                     </div>
                   </>
                 )}
@@ -721,7 +721,7 @@ const Ingresos = () => {
                 </div>
                 <div className="text-right">
                   <span className="block text-[10px] uppercase tracking-widest opacity-50">Monto Total Cobrado</span>
-                  <p className={`text-xl font-bold ${theme.gold}`}>S/ {Number(selectedIngreso.monto).toFixed(2)}</p>
+                  <p className={`text-xl font-bold ${theme.gold}`}><span className="notranslate" translate="no">S/ {Number(selectedIngreso.monto).toFixed(2)}</span></p>
                 </div>
               </div>
             </div>

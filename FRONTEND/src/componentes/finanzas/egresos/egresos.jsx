@@ -231,7 +231,7 @@ const Egresos = () => {
               <card.icon className={theme.gold} size={20} />
             </div>
             <h2 className="text-2xl font-semibold tracking-tight">
-              - S/ {card.value.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <span className="notranslate" translate="no">- S/ {card.value.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </h2>
           </div>
         ))}
@@ -319,7 +319,7 @@ const Egresos = () => {
                       {row.descripcion}
                     </td>
                     <td className="p-4 text-sm font-bold text-right text-rose-500 dark:text-rose-400">
-                      - S/ {Number.isNaN(Number(row.monto)) ? "0.00" : Number(row.monto).toFixed(2)}
+                      <span className="notranslate" translate="no">- S/ {Number.isNaN(Number(row.monto)) ? "0.00" : Number(row.monto).toFixed(2)}</span>
                     </td>
                     <td className="p-4 text-sm font-light italic">{row.metodo_pago}</td>
                     

@@ -44,7 +44,28 @@ export default function HistoryServicio() {
   };
 
   useEffect(() => {
-    fetchHistorial();
+    let isMounted = true;
+
+    const cargarHistorialInicial = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('historial_servicios')
+          .select('*')
+          .order('fecha', { ascending: false });
+
+        if (error) throw error;
+        if (isMounted) setLogs(data || []);
+      } catch (error) {
+        console.error('Error cargando historial de servicios:', error);
+        if (isMounted) mostrarToast('Error al conectar con la base de datos de servicios', 'error');
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    cargarHistorialInicial();
+    return () => { isMounted = false; };
   }, []);
 
   const formatFechaLog = (isoString) => {
@@ -168,7 +189,7 @@ export default function HistoryServicio() {
                   <td className="p-4 text-xs space-y-1">
                     {m.accion === 'Creado' ? (
                       <div className="text-emerald-400 font-medium">
-                        Valor Inicial: S/ {Number(m.valores_actuales?.precio || 0).toFixed(2)} ({m.valores_actuales?.duracion || 0} min)
+                        <span className="notranslate" translate="no">Valor Inicial: S/ {Number(m.valores_actuales?.precio || 0).toFixed(2)} ({m.valores_actuales?.duracion || 0} min)</span>
                       </div>
                     ) : m.accion === 'Eliminado' ? (
                       <div className="text-rose-400 opacity-80">
@@ -183,16 +204,16 @@ export default function HistoryServicio() {
                             {m.accion === 'Editado' || m.accion === 'Revertido' ? (
                               <>
                                 <span className="text-rose-400">
-                                  S/ {Number(m.valores_anteriores?.precio || 0).toFixed(2)}
+                                  <span className="notranslate" translate="no">S/ {Number(m.valores_anteriores?.precio || 0).toFixed(2)}</span>
                                 </span>
                                 <span className="opacity-40">→</span>
                                 <span className="text-emerald-400 font-semibold">
-                                  S/ {Number(m.valores_actuales?.precio || 0).toFixed(2)}
+                                  <span className="notranslate" translate="no">S/ {Number(m.valores_actuales?.precio || 0).toFixed(2)}</span>
                                 </span>
                               </>
                             ) : (
                               <span className="text-emerald-400 font-semibold">
-                                  S/ {Number(m.valores_actuales?.precio || m.valores_anteriores?.precio || 0).toFixed(2)}
+                                  <span className="notranslate" translate="no">S/ {Number(m.valores_actuales?.precio || m.valores_anteriores?.precio || 0).toFixed(2)}</span>
                               </span>
                             )}
                           </div>
@@ -205,16 +226,16 @@ export default function HistoryServicio() {
                             {m.accion === 'Editado' || m.accion === 'Revertido' ? (
                               <>
                                 <span className="text-rose-400">
-                                  {m.valores_anteriores?.duracion} min
+                                  <span className="notranslate" translate="no">{m.valores_anteriores?.duracion} min</span>
                                 </span>
                                 <span className="opacity-40">→</span>
                                 <span className="text-emerald-400 font-semibold">
-                                  {m.valores_actuales?.duracion} min
+                                  <span className="notranslate" translate="no">{m.valores_actuales?.duracion} min</span>
                                 </span>
                               </>
                             ) : (
                               <span className="text-emerald-400 font-semibold">
-                                {m.valores_actuales?.duracion || m.valores_anteriores?.duracion || 0} min
+                                <span className="notranslate" translate="no">{m.valores_actuales?.duracion || m.valores_anteriores?.duracion || 0} min</span>
                               </span>
                             )}
                           </div>
@@ -277,8 +298,8 @@ export default function HistoryServicio() {
                 {selectedLog.accion === 'Creado' ? (
                   <div className="bg-[#1a1a1a] border border-gray-800 rounded-sm p-4 space-y-2">
                     <div className="text-[10px] uppercase tracking-widest text-emerald-400 font-bold">Datos de Alta</div>
-                    <p><span className="opacity-50">Precio:</span> S/ {Number(selectedLog.valores_actuales?.precio || 0).toFixed(2)}</p>
-                    <p><span className="opacity-50">Duración:</span> {selectedLog.valores_actuales?.duracion || 0} minutos</p>
+                    <p><span className="opacity-50">Precio:</span> <span className="notranslate" translate="no">S/ {Number(selectedLog.valores_actuales?.precio || 0).toFixed(2)}</span></p>
+                    <p><span className="opacity-50">Duración:</span> <span className="notranslate" translate="no">{selectedLog.valores_actuales?.duracion || 0} minutos</span></p>
                     <p><span className="opacity-50">Descripción:</span> {selectedLog.valores_actuales?.descripcion || 'Sin descripción'}</p>
                   </div>
                 ) : (
@@ -291,14 +312,14 @@ export default function HistoryServicio() {
                           <div>
                             <div className="text-[9px] text-gray-500 uppercase">Antes</div>
                             <div className="text-rose-400 text-lg font-semibold">
-                              S/ {Number(selectedLog.valores_anteriores?.precio || 0).toFixed(2)}
+                              <span className="notranslate" translate="no">S/ {Number(selectedLog.valores_anteriores?.precio || 0).toFixed(2)}</span>
                             </div>
                           </div>
                           <div className="text-gray-600 text-xl">→</div>
                           <div className="text-right">
                             <div className="text-[9px] text-gray-500 uppercase">Ahora</div>
                             <div className="text-emerald-400 text-lg font-semibold">
-                              S/ {Number(selectedLog.valores_actuales?.precio || 0).toFixed(2)}
+                              <span className="notranslate" translate="no">S/ {Number(selectedLog.valores_actuales?.precio || 0).toFixed(2)}</span>
                             </div>
                           </div>
                         </div>
@@ -313,14 +334,14 @@ export default function HistoryServicio() {
                           <div>
                             <div className="text-[9px] text-gray-500 uppercase">Antes</div>
                             <div className="text-rose-400 text-lg font-semibold">
-                              {selectedLog.valores_anteriores?.duracion || 0} min
+                              <span className="notranslate" translate="no">{selectedLog.valores_anteriores?.duracion || 0} min</span>
                             </div>
                           </div>
                           <div className="text-gray-600 text-xl">→</div>
                           <div className="text-right">
                             <div className="text-[9px] text-gray-500 uppercase">Ahora</div>
                             <div className="text-emerald-400 text-lg font-semibold">
-                              {selectedLog.valores_actuales?.duracion || 0} min
+                              <span className="notranslate" translate="no">{selectedLog.valores_actuales?.duracion || 0} min</span>
                             </div>
                           </div>
                         </div>

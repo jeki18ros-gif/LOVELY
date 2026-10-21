@@ -32,7 +32,7 @@ const HeaderActions = ({ ventas, ventaActivaId, setVentaActivaId, onNueva, onDup
               className="flex items-center gap-2 px-4 py-2 rounded-lg border border-amber-500 text-amber-500 hover:bg-amber-500/10 transition-all font-medium text-sm group"
             >
               <History size={18} />
-              <span>Historial ({ventas.length})</span>
+              <span>Historial (<span className="notranslate" translate="no">{ventas.length}</span>)</span>
               <ChevronDown size={16} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </button>
 

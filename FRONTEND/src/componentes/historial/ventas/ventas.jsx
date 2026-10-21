@@ -172,10 +172,10 @@ export default function Ventas() {
           </div>
           <div>
             <span className="block text-[9px] uppercase tracking-widest text-gray-400 font-bold">
-              Total Filtrado ({ventasFiltradas.length})
+              Total Filtrado (<span className="notranslate" translate="no">{ventasFiltradas.length}</span>)
             </span>
             <span className="text-lg font-bold text-[#D4AF37] font-mono">
-              S/ {totalGanado.toFixed(2)}
+              <span className="notranslate" translate="no">S/ {totalGanado.toFixed(2)}</span>
             </span>
           </div>
         </div>
@@ -221,7 +221,7 @@ export default function Ventas() {
                     {v.nombre_cliente || "Cliente General"}
                   </td>
                   <td className="p-4 text-right text-[#D4AF37] font-bold">
-                    S/ {Number(v.monto_total || 0).toFixed(2)}
+                    <span className="notranslate" translate="no">S/ {Number(v.monto_total || 0).toFixed(2)}</span>
                   </td>
                   <td className="p-4 text-center">
                     <button 
@@ -299,11 +299,11 @@ export default function Ventas() {
                             {item.tipo}
                           </span>
                         </td>
-                        <td className="py-3 pl-2 opacity-80">{item.cantidad}</td>
-                        <td className="py-3 text-right">S/ {Number(item.precio_unitario || 0).toFixed(2)}</td>
-                        <td className="py-3 text-right text-rose-400">-S/ {Number(item.descuento || 0).toFixed(2)}</td>
+                        <td className="py-3 pl-2 opacity-80"><span className="notranslate" translate="no">{item.cantidad}</span></td>
+                        <td className="py-3 text-right"><span className="notranslate" translate="no">S/ {Number(item.precio_unitario || 0).toFixed(2)}</span></td>
+                        <td className="py-3 text-right text-rose-400"><span className="notranslate" translate="no">-S/ {Number(item.descuento || 0).toFixed(2)}</span></td>
                         <td className="py-3 text-right font-semibold text-gray-700 dark:text-gray-200">
-                          S/ {Number(item.subtotal || 0).toFixed(2)}
+                          <span className="notranslate" translate="no">S/ {Number(item.subtotal || 0).toFixed(2)}</span>
                         </td>
                       </tr>
                     ))}
@@ -315,7 +315,7 @@ export default function Ventas() {
             <div className="p-4 bg-gray-50 dark:bg-[#181818] border-t border-gray-200 dark:border-gray-800 flex justify-between items-center">
               <div className="text-left">
                 <span className="block text-[9px] uppercase tracking-wider text-gray-400 font-bold">Total Liquidado</span>
-                <span className="text-base font-bold text-[#D4AF37]">S/ {Number(ventaSeleccionada.monto_total || 0).toFixed(2)}</span>
+                <span className="text-base font-bold text-[#D4AF37] notranslate" translate="no">S/ {Number(ventaSeleccionada.monto_total || 0).toFixed(2)}</span>
               </div>
               <button 
                 onClick={() => { setVentaSeleccionada(null); setDetallesVenta([]); }}

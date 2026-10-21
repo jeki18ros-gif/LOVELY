@@ -84,7 +84,7 @@ const ClienteTable = ({
                       {cliente.frecuencia}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-center font-bold text-amber-600 dark:text-amber-400">{cliente.visitas}</td>
+                  <td className="px-6 py-4 text-sm text-center font-bold text-amber-600 dark:text-amber-400"><span className="notranslate" translate="no">{cliente.visitas}</span></td>
                   
                   <td className="px-6 py-4 text-center">
                     <div className="flex justify-center gap-2">

@@ -79,7 +79,7 @@ const CategorySidebar = ({ onCategoriaChange }) => {
 
               <div className="flex items-center gap-2">
                 <span className={`text-xs font-mono px-2 py-0.5 rounded-full ${cat.activo ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-gray-100 dark:bg-zinc-800 text-gray-400'}`}>
-                  {cat.cantidad}
+                  <span className="notranslate" translate="no">{cat.cantidad}</span>
                 </span>
 
                 <button

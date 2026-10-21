@@ -299,7 +299,7 @@ const vuelto =
         </div>
         <p className="text-gray-500 text-sm mb-1">Total Neto</p>
         <h1 className="text-4xl font-bold text-amber-500">
-          S/ {metodo === 'mixto' ? (total + resumenMixto.totalComisiones).toFixed(2) : totalConComisionGeneral.toFixed(2)}
+          <span className="notranslate" translate="no">S/ {metodo === 'mixto' ? (total + resumenMixto.totalComisiones).toFixed(2) : totalConComisionGeneral.toFixed(2)}</span>
         </h1>
       </div>
 
@@ -329,11 +329,11 @@ const vuelto =
           <div className="flex justify-between">
             <div>
               <p className="text-xs text-gray-400">Abono real</p>
-              <p className="text-xl font-bold">S/ {metodo === 'tarjeta' ? (Number(montoPago) / 1.05).toFixed(2) : Number(montoPago || 0).toFixed(2)}</p>
+              <p className="text-xl font-bold"><span className="notranslate" translate="no">S/ {metodo === 'tarjeta' ? (Number(montoPago) / 1.05).toFixed(2) : Number(montoPago || 0).toFixed(2)}</span></p>
             </div>
             <div className="text-right">
               <p className="text-xs text-gray-400">{cambio >= 0 ? 'Vuelto' : 'Faltante'}</p>
-              <h2 className={`text-3xl font-bold ${cambio >= 0 ? 'text-green-500' : 'text-red-500'}`}>S/ {Math.abs(cambio).toFixed(2)}</h2>
+              <h2 className={`text-3xl font-bold ${cambio >= 0 ? 'text-green-500' : 'text-red-500'}`}><span className="notranslate" translate="no">S/ {Math.abs(cambio).toFixed(2)}</span></h2>
             </div>
           </div>
         </div>
@@ -358,12 +358,12 @@ const vuelto =
               <div className="text-sm space-y-1">
                 <div className="flex justify-between">
                   <span>Abono real</span>
-                  <span className="font-bold text-green-500">S/ {pago.abonoReal.toFixed(2)}</span>
+                  <span className="font-bold text-green-500 notranslate" translate="no">S/ {pago.abonoReal.toFixed(2)}</span>
                 </div>
                 {pago.tipo === 'tarjeta' && (
                   <div className="flex justify-between">
                     <span>Comisión</span>
-                    <span className="text-red-400 font-bold">S/ {pago.comision.toFixed(2)}</span>
+                    <span className="text-red-400 font-bold notranslate" translate="no">S/ {pago.comision.toFixed(2)}</span>
                   </div>
                 )}
               </div>
@@ -378,19 +378,19 @@ const vuelto =
           <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 space-y-2">
             <div className="flex justify-between">
               <span>Deuda cubierta</span>
-              <span className="font-bold">S/ {resumenMixto.abonoReal.toFixed(2)} / S/ {total.toFixed(2)}</span>
+              <span className="font-bold notranslate" translate="no">S/ {resumenMixto.abonoReal.toFixed(2)} / S/ {total.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
               <span>Total cobrado</span>
-              <span className="font-bold">S/ {resumenMixto.totalCobrado.toFixed(2)}</span>
+              <span className="font-bold notranslate" translate="no">S/ {resumenMixto.totalCobrado.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
               <span>Comisiones</span>
-              <span className="text-red-400 font-bold">S/ {resumenMixto.totalComisiones.toFixed(2)}</span>
+              <span className="text-red-400 font-bold notranslate" translate="no">S/ {resumenMixto.totalComisiones.toFixed(2)}</span>
             </div>
             {resumenMixto.faltanteReal > 0 ? (
               <div className="flex items-center gap-2 text-amber-500">
-                <AlertCircle size={16}/><p className="text-sm">Faltan: <b>S/ {resumenMixto.faltanteReal.toFixed(2)}</b></p>
+                <AlertCircle size={16}/><p className="text-sm">Faltan: <b className="notranslate" translate="no">S/ {resumenMixto.faltanteReal.toFixed(2)}</b></p>
               </div>
             ) : (
               <div className="text-green-500 font-bold text-center">¡Pago completo!</div>

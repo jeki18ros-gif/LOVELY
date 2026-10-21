@@ -8,27 +8,6 @@ const useServicesCategory = (onCategoriaChange) => {
   const [newCat, setNewCat] = useState('');
   const [editIndex, setEditIndex] = useState(null);
   const [menuOpen, setMenuOpen] = useState(null);
-  const obtenerCategorias = async () => {
-    const { data, error } = await supabase
-      .from('categorias')
-      .select('*')
-      .eq('tipo', 'servicio');
-    if (error) {
-      console.error(error);
-      return;}
-    const categoriasFormateadas = [
-      {
-        id: 0,
-        nombre: 'Todos',
-        cantidad: 0,
-        activo: true
-      },
-      ...data.map(cat => ({
-        ...cat,
-        cantidad: 0,
-        activo: false
-      }))];
-    setCategorias(categoriasFormateadas);};
   const obtenerCantidadPorCategoria = async () => {
     const { data, error } = await supabase
       .from('servicio')
@@ -47,13 +26,41 @@ const useServicesCategory = (onCategoriaChange) => {
           cat.id === 0
             ? data.length
             : conteo[cat.id] || 0})));};
-  const cargarTodo = async () => {
-    await obtenerCategorias();
-    setTimeout(() => {
-      obtenerCantidadPorCategoria();
-    }, 100);};
   useEffect(() => {
-    cargarTodo();
+    let isMounted = true;
+    const cargarDatosIniciales = async () => {
+      const [categoriasResult, serviciosResult] = await Promise.all([
+        supabase.from('categorias').select('*').eq('tipo', 'servicio'),
+        supabase.from('servicio').select('categoria_id')
+      ]);
+
+      if (!isMounted) return;
+      if (categoriasResult.error) {
+        console.error(categoriasResult.error);
+        return;
+      }
+      if (serviciosResult.error) {
+        console.error(serviciosResult.error);
+        return;
+      }
+
+      const listaServicios = serviciosResult.data || [];
+      const conteo = listaServicios.reduce((resultado, item) => {
+        resultado[item.categoria_id] = (resultado[item.categoria_id] || 0) + 1;
+        return resultado;
+      }, {});
+      setCategorias([
+        { id: 0, nombre: 'Todos', cantidad: listaServicios.length, activo: true },
+        ...(categoriasResult.data || []).map((categoria) => ({
+          ...categoria,
+          cantidad: conteo[categoria.id] || 0,
+          activo: false
+        }))
+      ]);
+    };
+
+    cargarDatosIniciales();
+    return () => { isMounted = false; };
   }, []);
   const handleSave = async () => {
     if (!newCat.trim()) return;

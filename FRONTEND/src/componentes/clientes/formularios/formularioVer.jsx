@@ -11,41 +11,30 @@ export default function FormularioVer({ isOpen, onClose, cliente }) {
 
   useEffect(() => {
     if (!cliente?.id || !isOpen) return;
+    let isMounted = true;
 
-    const obtenerDetalleCliente = async () => {
-      const { data, error } = await supabase
-        .from("clientes")
-        .select("*")
-        .eq("id", cliente.id)
-        .single();
+    const cargarDatosCliente = async () => {
+      const [detalleResult, seguimientoResult] = await Promise.all([
+        supabase.from('clientes').select('*').eq('id', cliente.id).single(),
+        supabase.from('seguimiento').select('*').eq('id_cliente', cliente.id)
+          .eq('tipo', 'cliente').order('fecha', { ascending: false }).limit(1)
+      ]);
 
-      if (error) {
-        console.error("Error al obtener el detalle del cliente:", error);
-        return;
+      if (!isMounted) return;
+      if (detalleResult.error) {
+        console.error('Error al obtener el detalle del cliente:', detalleResult.error);
+      } else {
+        setDetalleCliente(detalleResult.data);
       }
-
-      setDetalleCliente(data);
+      if (seguimientoResult.error) {
+        console.error('Error al obtener el seguimiento:', seguimientoResult.error);
+      } else {
+        setSeguimientos(seguimientoResult.data || []);
+      }
     };
 
-    const obtenerSeguimiento = async () => {
-      const { data, error } = await supabase
-        .from("seguimiento")
-        .select("*")
-        .eq("id_cliente", cliente.id)
-        .eq("tipo", "cliente")
-        .order("fecha", { ascending: false })
-        .limit(1);
-
-      if (error) {
-        console.error("Error al obtener el seguimiento:", error);
-        return;
-      }
-
-      setSeguimientos(data || []);
-    };
-
-    obtenerDetalleCliente();
-    obtenerSeguimiento();
+    cargarDatosCliente();
+    return () => { isMounted = false; };
   }, [cliente?.id, isOpen]);
 
   if (!isOpen || !data) return null;
@@ -81,7 +70,7 @@ export default function FormularioVer({ isOpen, onClose, cliente }) {
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/[0.03] border border-yellow-500/10">
               <p className="text-[10px] uppercase font-bold text-gray-500 mb-1">Visitas</p>
-              <p className="text-xl font-bold text-yellow-600">{data.visitas}</p>
+              <p className="text-xl font-bold text-yellow-600"><span className="notranslate" translate="no">{data.visitas}</span></p>
             </div>
             <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/[0.03] border border-yellow-500/10">
               <p className="text-[10px] uppercase font-bold text-gray-500 mb-1">Registro</p>

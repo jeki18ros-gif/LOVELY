@@ -95,7 +95,7 @@ useEffect(() => {
         }
       } catch (error) {
         console.error('Error cargando cierres:', error);
-        mostrarToast("Error al conectar con la base de datos de auditoría", "error");
+        if (isMounted) mostrarToast("Error al conectar con la base de datos de auditoría", "error");
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -250,13 +250,13 @@ useEffect(() => {
                       {formatFecha(c.fecha_cierre || c.fecha_apertura)}
                     </td>
                     <td className="p-4 text-right text-emerald-500 font-medium">
-                      S/ {Number(c.ingresos_sistema || 0).toFixed(2)}
+                      <span className="notranslate" translate="no">S/ {Number(c.ingresos_sistema || 0).toFixed(2)}</span>
                     </td>
                     <td className="p-4 text-right text-rose-500">
-                      S/ {Number(c.egresos_sistema || 0).toFixed(2)}
+                      <span className="notranslate" translate="no">S/ {Number(c.egresos_sistema || 0).toFixed(2)}</span>
                     </td>
                     <td className={`p-4 text-right font-bold ${Math.abs(dif) <= 0.01 ? 'opacity-40' : dif < 0 ? 'text-rose-500' : 'text-amber-500'}`}>
-                      S/ {Number(dif || 0).toFixed(2)}
+                      <span className="notranslate" translate="no">S/ {Number(dif || 0).toFixed(2)}</span>
                     </td>
                     <td className="p-4 text-center">
                       <span className={`px-2.5 py-1 text-[10px] uppercase font-bold rounded-sm tracking-wider ${badgeEstilo}`}>
@@ -309,7 +309,7 @@ useEffect(() => {
                 </div>
                 <div>
                   <span className="block text-[10px] uppercase tracking-wider text-gray-400 font-medium">Base Inicial</span>
-                  <span className="text-xs font-semibold text-blue-400">S/ {Number(cierreSeleccionado.base_inicial || 0).toFixed(2)}</span>
+                  <span className="text-xs font-semibold text-blue-400 notranslate" translate="no">S/ {Number(cierreSeleccionado.base_inicial || 0).toFixed(2)}</span>
                 </div>
               </div>
 
@@ -320,19 +320,19 @@ useEffect(() => {
                   
                   <div className="flex justify-between items-center text-xs">
                     <span className="opacity-70">Efectivo Contado:</span>
-                    <span className="font-medium">S/ {Number(cierreSeleccionado.efectivo_contado || 0).toFixed(2)}</span>
+                    <span className="font-medium notranslate" translate="no">S/ {Number(cierreSeleccionado.efectivo_contado || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
                     <span className="opacity-70">Yape Contado:</span>
-                    <span className="font-medium">S/ {Number(cierreSeleccionado.yape_contado || 0).toFixed(2)}</span>
+                    <span className="font-medium notranslate" translate="no">S/ {Number(cierreSeleccionado.yape_contado || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
                     <span className="opacity-70">Tarjeta Contada:</span>
-                    <span className="font-medium">S/ {Number(cierreSeleccionado.tarjeta_contado || 0).toFixed(2)}</span>
+                    <span className="font-medium notranslate" translate="no">S/ {Number(cierreSeleccionado.tarjeta_contado || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
                     <span className="opacity-70">Plin Contado:</span>
-                    <span className="font-medium">S/ {Number(cierreSeleccionado.plin_contado || 0).toFixed(2)}</span>
+                    <span className="font-medium notranslate" translate="no">S/ {Number(cierreSeleccionado.plin_contado || 0).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -341,12 +341,12 @@ useEffect(() => {
               <div className="pt-2 grid grid-cols-2 gap-4 text-center">
                 <div className="p-2 bg-emerald-500/5 border border-emerald-500/10 rounded-sm">
                   <span className="block text-[9px] uppercase tracking-wider text-emerald-400 font-bold">Total Sistema</span>
-                  <span className="text-sm font-bold text-emerald-500">S/ {Number(cierreSeleccionado.ingresos_sistema || 0).toFixed(2)}</span>
+                  <span className="text-sm font-bold text-emerald-500 notranslate" translate="no">S/ {Number(cierreSeleccionado.ingresos_sistema || 0).toFixed(2)}</span>
                 </div>
                 <div className="p-2 bg-black/10 dark:bg-white/5 border border-gray-200 dark:border-gray-800 rounded-sm">
                   <span className="block text-[9px] uppercase tracking-wider text-gray-400 font-bold">Diferencia Final</span>
                   <span className={`text-sm font-bold ${Math.abs(cierreSeleccionado.diferenciaCalculada) <= 0.01 ? 'text-gray-400' : cierreSeleccionado.diferenciaCalculada < 0 ? 'text-rose-500' : 'text-amber-500'}`}>
-                    S/ {Number(cierreSeleccionado.diferenciaCalculada || 0).toFixed(2)}
+                    <span className="notranslate" translate="no">S/ {Number(cierreSeleccionado.diferenciaCalculada || 0).toFixed(2)}</span>
                   </span>
                 </div>
               </div>

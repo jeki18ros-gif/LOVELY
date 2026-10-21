@@ -102,7 +102,7 @@ const ProductTable = ({
                         }
                       `}
                     >
-                      {product.stock} unds
+                          <span className="notranslate" translate="no">{product.stock} unds</span>
                     </span>
                   </td>
 
@@ -182,7 +182,7 @@ const ProductTable = ({
         {/* PAGINACIÓN */}
         <div className="px-6 py-4 flex items-center justify-between border-t border-amber-500/10 bg-amber-500/[0.01] dark:bg-zinc-900/20">
           <p className="text-xs text-amber-700 dark:text-amber-500/60 uppercase tracking-widest font-bold">
-            Total: {filteredProducts.length} resultados
+            Total: <span className="notranslate" translate="no">{filteredProducts.length}</span> resultados
           </p>
 
           <div className="flex items-center gap-3">

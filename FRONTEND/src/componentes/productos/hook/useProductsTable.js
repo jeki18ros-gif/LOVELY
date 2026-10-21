@@ -64,8 +64,29 @@ const useProductsTable = ({
   };
 
   useEffect(() => {
-    obtenerProductos();
-    obtenerCategorias();
+    let isMounted = true;
+
+    const cargarDatos = async () => {
+      const [productosResult, categoriasResult] = await Promise.all([
+        supabase.from('producto').select(`*, categorias (id, nombre)`),
+        supabase.from('categorias').select('*').eq('tipo', 'producto')
+      ]);
+
+      if (!isMounted) return;
+      if (productosResult.error) console.error(productosResult.error.message);
+      else {
+        setProducts((productosResult.data || []).map((product) => ({
+          ...product,
+          categoria: product.categorias?.nombre || 'Sin categoría',
+          categoryColor: 'bg-cyan-500/20 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-400'
+        })));
+      }
+      if (categoriasResult.error) console.error(categoriasResult.error);
+      else setCategorias(categoriasResult.data || []);
+    };
+
+    cargarDatos();
+    return () => { isMounted = false; };
   }, [refresh]);
 
   /* =========================

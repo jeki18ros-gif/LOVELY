@@ -47,7 +47,28 @@ export default function HistoryProductos() {
   };
 
   useEffect(() => {
-    fetchHistorial();
+    let isMounted = true;
+
+    const cargarHistorialInicial = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('historial_productos')
+          .select('*')
+          .order('fecha', { ascending: false });
+
+        if (error) throw error;
+        if (isMounted) setLogs(data || []);
+      } catch (error) {
+        console.error('Error cargando historial de productos:', error);
+        if (isMounted) mostrarToast('Error al conectar con la base de datos de auditoría', 'error');
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    cargarHistorialInicial();
+    return () => { isMounted = false; };
   }, []);
 
   // Función para formatear fechas de auditoría
@@ -195,16 +216,16 @@ export default function HistoryProductos() {
                           {m.accion === 'Editado' ? (
                             <>
                               <span className="text-rose-400">
-                                S/ {Number(m.valores_anteriores?.precio || 0).toFixed(2)}
+                                <span className="notranslate" translate="no">S/ {Number(m.valores_anteriores?.precio || 0).toFixed(2)}</span>
                               </span>
                               <span className="opacity-40">→</span>
                               <span className="text-emerald-400 font-semibold">
-                                S/ {Number(m.valores_actuales?.precio || 0).toFixed(2)}
+                                <span className="notranslate" translate="no">S/ {Number(m.valores_actuales?.precio || 0).toFixed(2)}</span>
                               </span>
                             </>
                           ) : (
                             <span className="text-emerald-400 font-semibold">
-                              S/ {Number(m.valores_actuales?.precio || m.valores_anteriores?.precio || 0).toFixed(2)}
+                              <span className="notranslate" translate="no">S/ {Number(m.valores_actuales?.precio || m.valores_anteriores?.precio || 0).toFixed(2)}</span>
                             </span>
                           )}
                         </div>
@@ -217,16 +238,16 @@ export default function HistoryProductos() {
                           {m.accion === 'Editado' ? (
                             <>
                               <span className="text-rose-400">
-                                {m.valores_anteriores?.stock}
+                                <span className="notranslate" translate="no">{m.valores_anteriores?.stock}</span>
                               </span>
                               <span className="opacity-40">→</span>
                               <span className="text-emerald-400 font-semibold">
-                                {m.valores_actuales?.stock}
+                                <span className="notranslate" translate="no">{m.valores_actuales?.stock}</span>
                               </span>
                             </>
                           ) : (
                             <span className="text-emerald-400 font-semibold">
-                              {m.valores_actuales?.stock || m.valores_anteriores?.stock}
+                              <span className="notranslate" translate="no">{m.valores_actuales?.stock || m.valores_anteriores?.stock}</span>
                             </span>
                           )}
                         </div>
@@ -299,14 +320,14 @@ export default function HistoryProductos() {
                       <div>
                         <div className="text-[10px] text-gray-500 uppercase">Antes</div>
                         <div className="text-rose-400 text-lg font-semibold">
-                          S/ {Number(selectedLog.valores_anteriores?.precio || 0).toFixed(2)}
+                          <span className="notranslate" translate="no">S/ {Number(selectedLog.valores_anteriores?.precio || 0).toFixed(2)}</span>
                         </div>
                       </div>
                       <div className="text-gray-600 text-xl">→</div>
                       <div className="text-right">
                         <div className="text-[10px] text-gray-500 uppercase">Ahora</div>
                         <div className="text-emerald-400 text-lg font-semibold">
-                          S/ {Number(selectedLog.valores_actuales?.precio || 0).toFixed(2)}
+                          <span className="notranslate" translate="no">S/ {Number(selectedLog.valores_actuales?.precio || 0).toFixed(2)}</span>
                         </div>
                       </div>
                     </div>
@@ -323,14 +344,14 @@ export default function HistoryProductos() {
                       <div>
                         <div className="text-[10px] text-gray-500 uppercase">Antes</div>
                         <div className="text-rose-400 text-lg font-semibold">
-                          {selectedLog.valores_anteriores?.stock || 0}
+                          <span className="notranslate" translate="no">{selectedLog.valores_anteriores?.stock || 0}</span>
                         </div>
                       </div>
                       <div className="text-gray-600 text-xl">→</div>
                       <div className="text-right">
                         <div className="text-[10px] text-gray-500 uppercase">Ahora</div>
                         <div className="text-emerald-400 text-lg font-semibold">
-                          {selectedLog.valores_actuales?.stock || 0}
+                          <span className="notranslate" translate="no">{selectedLog.valores_actuales?.stock || 0}</span>
                         </div>
                       </div>
                     </div>

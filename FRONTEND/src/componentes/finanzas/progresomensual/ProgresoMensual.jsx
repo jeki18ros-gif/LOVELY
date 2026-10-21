@@ -81,7 +81,7 @@ export default function ProgresoMensual() {
   const [exportando, setExportando] = useState(false);
 
   useEffect(() => {
-    let cancelado = false;
+    let isMounted = true;
 
     const cargarDatos = async () => {
       setLoading(true);
@@ -139,21 +139,21 @@ export default function ProgresoMensual() {
           };
         });
 
-        if (!cancelado) {
+        if (isMounted) {
           setPagos(pagosResult.data || []);
           setEgresos(egresosResult.data || []);
           setVentas(ventasProcesadas);
         }
       } catch (error) {
         console.error('Error cargando el progreso mensual:', error);
-        if (!cancelado) setErrorCarga('No se pudieron cargar los movimientos financieros.');
+        if (isMounted) setErrorCarga('No se pudieron cargar los movimientos financieros.');
       } finally {
-        if (!cancelado) setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     cargarDatos();
-    return () => { cancelado = true; };
+    return () => { isMounted = false; };
   }, []);
 
   const meses = useMemo(() => {
@@ -469,7 +469,7 @@ export default function ProgresoMensual() {
                 const altura = mes.ganancia === 0 ? 2 : Math.max((Math.abs(mes.ganancia) / escala) * 100, 3);
                 return (
                   <div key={mes.key} className="group flex h-full min-w-0 flex-col items-center justify-end">
-                    <span className="mb-2 whitespace-nowrap text-xs font-semibold">
+                    <span className="mb-2 whitespace-nowrap text-xs font-semibold notranslate" translate="no">
                       {mes.ganancia < 0 ? '-' : ''}{formatoMoneda(Math.abs(mes.ganancia))}
                     </span>
                     <div
@@ -501,7 +501,7 @@ export default function ProgresoMensual() {
             >
               {rankingConceptos.map((item, index) => (
                 <div key={item.nombre} className="flex h-full w-24 shrink-0 flex-col items-center justify-end">
-                  <span className="mb-2 text-xs font-semibold">{item.cantidad} uds.</span>
+                  <span className="mb-2 text-xs font-semibold notranslate" translate="no">{item.cantidad} uds.</span>
                   <div
                     title={`${item.nombre}: ${item.cantidad} unidades, ${formatoMoneda(item.monto)} en ventas`}
                     className={`w-12 rounded-t transition-all ${index === 0 ? 'bg-[#D4AF37]' : tipoGrafico === 'servicios' ? 'bg-emerald-600' : 'bg-sky-600'}`}
@@ -606,7 +606,7 @@ export default function ProgresoMensual() {
                       <td className="p-3">
                         {textoConceptos(venta.servicios)}
                       </td>
-                      <td className="whitespace-nowrap p-3 text-right">{formatoMoneda(venta.montoServicios)}</td>
+                      <td className="whitespace-nowrap p-3 text-right"><span className="notranslate" translate="no">{formatoMoneda(venta.montoServicios)}</span></td>
                     </>
                   )}
                   {tipoTabla !== 'servicios' && (
@@ -614,7 +614,7 @@ export default function ProgresoMensual() {
                       <td className="p-3">
                         {textoConceptos(venta.productos)}
                       </td>
-                      <td className="whitespace-nowrap p-3 text-right">{formatoMoneda(venta.montoProductos)}</td>
+                      <td className="whitespace-nowrap p-3 text-right"><span className="notranslate" translate="no">{formatoMoneda(venta.montoProductos)}</span></td>
                     </>
                   )}
                 </tr>
@@ -622,7 +622,7 @@ export default function ProgresoMensual() {
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-right text-xs text-slate-500">{ventasFiltradas.length} ventas</p>
+        <p className="mt-2 text-right text-xs text-slate-500"><span className="notranslate" translate="no">{ventasFiltradas.length} ventas</span></p>
       </section>
 
       {modalPDF && (

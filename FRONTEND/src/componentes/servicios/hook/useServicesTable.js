@@ -31,8 +31,29 @@ const useServicesTable = ({ filters, categoriaSeleccionada, refresh }) => {
   };
 
   useEffect(() => {
-    obtenerServicios();
-    obtenerCategorias();
+    let isMounted = true;
+
+    const cargarDatos = async () => {
+      const [serviciosResult, categoriasResult] = await Promise.all([
+        supabase.from('servicio').select(`*, categorias (id, nombre)`),
+        supabase.from('categorias').select('*').eq('tipo', 'servicio')
+      ]);
+
+      if (!isMounted) return;
+      if (serviciosResult.error) console.error(serviciosResult.error.message);
+      else {
+        setServices((serviciosResult.data || []).map((service) => ({
+          ...service,
+          categoria: service.categorias?.nombre || 'Sin categoría',
+          categoryColor: 'bg-yellow-500/20 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400'
+        })));
+      }
+      if (categoriasResult.error) console.error(categoriasResult.error);
+      else setCategorias(categoriasResult.data || []);
+    };
+
+    cargarDatos();
+    return () => { isMounted = false; };
   }, [refresh]);
 
   const filteredServices = useMemo(() => {

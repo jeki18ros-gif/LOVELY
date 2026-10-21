@@ -26,39 +26,40 @@ export default function Citas() {
     return timeString.substring(0, 5);
   };
 
-  // Obtener Citas Filtradas desde la Base de Datos
-  const fetchCitasHistoricas = async () => {
-    setLoading(true);
-    try {
-      // Traemos la data cruzando con las tablas relacionales de clientes y servicio
-      const { data, error } = await supabase
-        .from('citas')
-        .select(`
-          id,
-          fecha,
-          hora_inicio,
-          duracion_minutos,
-          precio,
-          estado,
-          notas,
-          clientes ( nombre ),
-          servicio ( nombre )
-        `)
-        .in('estado', ['Realizada', 'Cancelada']) // Filtro estricto solicitado
-        .order('fecha', { ascending: false })
-        .order('hora_inicio', { ascending: false });
-
-      if (error) throw error;
-      setCitas(data || []);
-    } catch (error) {
-      console.error('Error cargando el historial de citas:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchCitasHistoricas();
+    let isMounted = true;
+
+    const cargarCitasHistoricas = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('citas')
+          .select(`
+            id,
+            fecha,
+            hora_inicio,
+            duracion_minutos,
+            precio,
+            estado,
+            notas,
+            clientes ( nombre ),
+            servicio ( nombre )
+          `)
+          .in('estado', ['Realizada', 'Cancelada'])
+          .order('fecha', { ascending: false })
+          .order('hora_inicio', { ascending: false });
+
+        if (error) throw error;
+        if (isMounted) setCitas(data || []);
+      } catch (error) {
+        console.error('Error cargando el historial de citas:', error);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    cargarCitasHistoricas();
+    return () => { isMounted = false; };
   }, []);
 
   // Lógica de Filtros en Frontend
@@ -201,12 +202,12 @@ export default function Citas() {
 
                   {/* Duración */}
                   <td className="p-4 text-xs opacity-70">
-                    {c.duracion_minutos || 0} min
+                    <span className="notranslate" translate="no">{c.duracion_minutos || 0} min</span>
                   </td>
                   
                   {/* Costo / Precio */}
                   <td className="p-4 text-right text-[#D4AF37] font-bold">
-                    S/ {Number(c.precio || 0).toFixed(2)}
+                    <span className="notranslate" translate="no">S/ {Number(c.precio || 0).toFixed(2)}</span>
                   </td>
                   
                   {/* Flujo / Estado Badge */}

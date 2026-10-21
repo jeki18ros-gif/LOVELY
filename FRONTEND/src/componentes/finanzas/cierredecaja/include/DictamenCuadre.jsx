@@ -12,7 +12,7 @@ export default function DictamenCuadre({ saldoCajaEsperado, diferenciaTotalGloba
         <div className="space-y-3 text-sm border-b border-gray-100 dark:border-gray-800 pb-4">
           <div className="flex justify-between opacity-70">
             <span>Esperado total en caja:</span>
-            <span>S/ {saldoCajaEsperado.toFixed(2)}</span>
+            <span className="notranslate" translate="no">S/ {saldoCajaEsperado.toFixed(2)}</span>
           </div>
           <p className="text-[10px] text-gray-400 italic">
             *(Suma ingresos + base inicial - egresos)
@@ -33,7 +33,7 @@ export default function DictamenCuadre({ saldoCajaEsperado, diferenciaTotalGloba
               : 'bg-rose-500/10 text-rose-400'
           }`}
         >
-          S/ {diferenciaTotalGlobal.toFixed(2)}
+          <span className="notranslate" translate="no">S/ {diferenciaTotalGlobal.toFixed(2)}</span>
         </div>
 
         {diferenciaTotalGlobal !== 0 && (

@@ -19,10 +19,10 @@ export default function TarjetasResumen({
           <TrendingUp className="text-emerald-500" size={20} />
         </div>
         <h2 className="text-2xl font-semibold tracking-tight">
-          S/ {ingresoTotalBruto.toFixed(2)}
+          <span className="notranslate" translate="no">S/ {ingresoTotalBruto.toFixed(2)}</span>
         </h2>
         <p className="text-[10px] text-gray-400 mt-2">
-          Ventas: S/ {datosSistema.ingresos.toFixed(2)} | Extras: S/ {(datosSistema.ingresosExtras || 0).toFixed(2)}
+          <span className="notranslate" translate="no">Ventas: S/ {datosSistema.ingresos.toFixed(2)} | Extras: S/ {(datosSistema.ingresosExtras || 0).toFixed(2)}</span>
         </p>
       </div>
 
@@ -33,7 +33,7 @@ export default function TarjetasResumen({
           <TrendingDown className="text-rose-500" size={20} />
         </div>
         <h2 className="text-2xl font-semibold tracking-tight">
-          - S/ {datosSistema.egresos.toFixed(2)}
+          <span className="notranslate" translate="no">- S/ {datosSistema.egresos.toFixed(2)}</span>
         </h2>
       </div>
 
@@ -44,7 +44,7 @@ export default function TarjetasResumen({
           <Wallet className="text-[#D4AF37]" size={20} />
         </div>
         <h2 className="text-2xl font-semibold tracking-tight">
-          S/ {gananciaDia.toFixed(2)}
+          <span className="notranslate" translate="no">S/ {gananciaDia.toFixed(2)}</span>
         </h2>
       </div>
 

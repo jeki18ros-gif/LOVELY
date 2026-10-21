@@ -136,7 +136,7 @@ const DetalleCita = ({ isOpen, onClose, cita, onUpdate, onDelete }) => {
                 {isEditing ? (
                   <input type="number" name="price" value={editData.price || ''} onChange={handleChange} className="w-full bg-gray-50 dark:bg-zinc-900 border dark:border-zinc-800 p-2 rounded-md dark:text-white" />
                 ) : (
-                  <p className="text-gray-900 dark:text-white font-bold text-lg">S/ {cita.price || '0.00'}</p>
+                  <p className="text-gray-900 dark:text-white font-bold text-lg"><span className="notranslate" translate="no">S/ {cita.price || '0.00'}</span></p>
                 )}
               </div>
               <div>

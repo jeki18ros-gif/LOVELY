@@ -23,7 +23,7 @@ export default function SeccionExtras({ ingresosExtras = 0, egresos = 0 }) {
             </span>
           </div>
           <span className="font-bold text-emerald-500">
-            + S/ {ingresosExtras.toFixed(2)}
+            <span className="notranslate" translate="no">+ S/ {ingresosExtras.toFixed(2)}</span>
           </span>
         </div>
 
@@ -36,7 +36,7 @@ export default function SeccionExtras({ ingresosExtras = 0, egresos = 0 }) {
             </span>
           </div>
           <span className="font-bold text-rose-500">
-            - S/ {egresos.toFixed(2)}
+            <span className="notranslate" translate="no">- S/ {egresos.toFixed(2)}</span>
           </span>
         </div>
 
@@ -46,7 +46,7 @@ export default function SeccionExtras({ ingresosExtras = 0, egresos = 0 }) {
             Balance Ajustes Extras
           </span>
           <span className={`font-bold ${balanceExtras >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-            {balanceExtras >= 0 ? '+' : ''} S/ {balanceExtras.toFixed(2)}
+            <span className="notranslate" translate="no">{balanceExtras >= 0 ? '+' : ''} S/ {balanceExtras.toFixed(2)}</span>
           </span>
         </div>
       </div>

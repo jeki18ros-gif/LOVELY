@@ -1,7 +1,6 @@
 import React, {
   useState,
   useEffect,
-  useMemo
 } from 'react';
 
 import {
@@ -36,6 +35,7 @@ const ProductList = ({
 
   // Cargar categorías
   useEffect(() => {
+    let isMounted = true;
     const obtenerCategorias =
       async () => {
 
@@ -51,14 +51,16 @@ const ProductList = ({
         return;
       }
 
-      setCategorias(data || []);
+      if (isMounted) setCategorias(data || []);
     };
 
     obtenerCategorias();
+    return () => { isMounted = false; };
   }, []);
 
   // Cargar productos
   useEffect(() => {
+    let isMounted = true;
     const obtenerProductos =
       async () => {
 
@@ -103,10 +105,11 @@ const ProductList = ({
         return;
       }
 
-      setProductos(data || []);
+      if (isMounted) setProductos(data || []);
     };
 
     obtenerProductos();
+    return () => { isMounted = false; };
   }, [
     busqueda,
     categoriaSeleccionada
@@ -230,7 +233,7 @@ const ProductList = ({
               {/* DERECHA */}
               <div className="flex items-center gap-4">
                 <div className="text-right">
-                  <span className="text-sm font-semibold block">S/ {prod.precio}</span>
+                  <span className="text-sm font-semibold block notranslate" translate="no">S/ {prod.precio}</span>
                   {/* MODIFICACIÓN AQUÍ: Muestra el stock con colores dinámicos */}
                   <span className={`text-[10px] font-bold uppercase ${
                     prod.stock > 10 
@@ -239,7 +242,7 @@ const ProductList = ({
                       ? 'text-yellow-600 dark:text-yellow-400' 
                       : 'text-red-500'
                   }`}>
-                    {prod.stock > 0 ? `${prod.stock} disp.` : 'Agotado'}
+                    <span className="notranslate" translate="no">{prod.stock > 0 ? `${prod.stock} disp.` : 'Agotado'}</span>
                   </span>
                 </div>
 
