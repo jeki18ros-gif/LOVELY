@@ -9,6 +9,7 @@ import TablaCuadre from './include/TablaCuadre';
 import DictamenCuadre from './include/DictamenCuadre';
 import EstadoCajaCerrada from './include/EstadoCajaCerrada';
 import SeccionExtras from './include/SeccionExtras';
+import { calcularArqueo, calcularEsperadoCanal } from './cuadreCaja';
 
 const obtenerFechaHoyLocal = () => {
   const hoy = new Date();
@@ -110,7 +111,7 @@ const CierreCaja = () => {
         // C. VERIFICAR CIERRE EN HISTORIAL
         const { data: cierresData } = await supabase
           .from('cierre_caja')
-          .select('id, fecha_cierre, ingresos_sistema, egresos_sistema');
+          .select('id, fecha_cierre, ingresos_sistema, egresos_sistema, base_inicial, efectivo_contado, yape_contado, plin_contado, tarjeta_contado');
 
         const cierreExistente = (cierresData || []).find(c => c.fecha_cierre && c.fecha_cierre.startsWith(fechaSeleccionada));
 
@@ -125,6 +126,13 @@ const CierreCaja = () => {
           });
 
           if (cierreExistente) {
+            setBaseInicial(Number(cierreExistente.base_inicial || 0));
+            setValoresContados({
+              efectivo: String(cierreExistente.efectivo_contado ?? ''),
+              yape: String(cierreExistente.yape_contado ?? ''),
+              plin: String(cierreExistente.plin_contado ?? ''),
+              tarjeta: String(cierreExistente.tarjeta_contado ?? '')
+            });
             const difIngresos = Math.abs((cierreExistente.ingresos_sistema || 0) - ingresoTotalCalculado);
             const difEgresos = Math.abs((cierreExistente.egresos_sistema || 0) - sumaEgresosTotal);
 
@@ -153,17 +161,15 @@ const CierreCaja = () => {
   const ingresoTotalBruto = datosSistema.ingresos + datosSistema.ingresosExtras;
   const gananciaDia = ingresoTotalBruto - datosSistema.egresos;
   const saldoCajaEsperado = Number(baseInicial) + ingresoTotalBruto - datosSistema.egresos;
+  const totalContado = Object.values(valoresContados).reduce((total, monto) => total + (parseFloat(monto) || 0), 0);
+  const arqueoGlobal = calcularArqueo(saldoCajaEsperado, totalContado);
+  const deficitCanales = Object.entries(datosSistema.metodos).reduce((total, [metodo, saldo]) => {
+    return total + calcularEsperadoCanal(metodo, saldo, baseInicial).deficit;
+  }, 0);
 
   const handleInputChange = (metodo, valor) => {
     setValoresContados(prev => ({ ...prev, [metodo]: valor }));
   };
-
-  const diferenciaTotalGlobal = Object.keys(datosSistema.metodos).reduce((acc, metodo) => {
-    const contado = parseFloat(valoresContados[metodo]) || 0;
-    const esperado = datosSistema.metodos[metodo];
-    const esperadoRealCanal = metodo === 'efectivo' ? esperado + Number(baseInicial) : esperado;
-    return acc + (contado - esperadoRealCanal);
-  }, 0);
 
   // GUARDAR / ACTUALIZAR CIERRE
   const handleCerrarCaja = async () => {
@@ -236,6 +242,7 @@ const cierreExistente = cierresData?.[0] || null;
       <TarjetasResumen
         datosSistema={datosSistema}
         gananciaDia={gananciaDia}
+        deficitGlobal={arqueoGlobal.deficitGlobal}
         baseInicial={baseInicial}
         setBaseInicial={setBaseInicial}
       />
@@ -248,6 +255,9 @@ const cierreExistente = cierresData?.[0] || null;
         <EstadoCajaCerrada 
           fechaSeleccionada={fechaSeleccionada} 
           hayNuevosMovimientos={hayNuevosMovimientos}
+          estadoCuadre={arqueoGlobal.estado}
+          diferencia={arqueoGlobal.diferencia}
+          deficitGlobal={arqueoGlobal.deficitGlobal}
           onReabrirCaja={() => setCajaCerrada(false)}
         />
       ) : (
@@ -255,6 +265,8 @@ const cierreExistente = cierresData?.[0] || null;
           <SeccionExtras 
             ingresosExtras={datosSistema.ingresosExtras} 
             egresos={datosSistema.egresos} 
+            deficitGlobal={arqueoGlobal.deficitGlobal}
+            deficitCanales={deficitCanales}
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -269,7 +281,9 @@ const cierreExistente = cierresData?.[0] || null;
             <div className="lg:col-span-4">
               <DictamenCuadre
                 saldoCajaEsperado={saldoCajaEsperado}
-                diferenciaTotalGlobal={diferenciaTotalGlobal}
+                diferenciaTotalGlobal={arqueoGlobal.diferencia}
+                estadoCuadre={arqueoGlobal.estado}
+                deficitGlobal={arqueoGlobal.deficitGlobal}
               />
             </div>
           </div>

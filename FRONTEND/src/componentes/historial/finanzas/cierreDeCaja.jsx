@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, Calendar, Filter, X, DollarSign, CheckCircle2, AlertCircle } from 'lucide-react';
 import { supabase } from "../../../lib/supabase";
+import { calcularArqueo } from '../../finanzas/cierredecaja/cuadreCaja';
 
 export default function CierreCaja() {
   // Estados para los filtros superiores
@@ -64,14 +65,13 @@ useEffect(() => {
             Number(cierre.base_inicial || 0) + 
             Number(cierre.ingresos_sistema || 0) - 
             Number(cierre.egresos_sistema || 0);
-
-          const diferenciaCalculada = Number(
-            (totalContado - saldoEsperado).toFixed(2)
-          );
+          const arqueo = calcularArqueo(saldoEsperado, totalContado);
 
           const cierreProcesado = {
             ...cierre,
-            diferenciaCalculada,
+            diferenciaCalculada: arqueo.diferencia,
+            estadoArqueo: arqueo.estado,
+            deficitGlobal: arqueo.deficitGlobal,
             totalContado
           };
 
@@ -112,12 +112,7 @@ useEffect(() => {
 
   // Lógica de Filtrado por Estado y Fechas
   const cierresFiltrados = cierresCaja.filter(c => {
-    const dif = c.diferenciaCalculada;
-    let estadoCalculado = 'Cuadrado';
-    if (dif < -0.01) estadoCalculado = 'Faltante';
-    if (dif > 0.01) estadoCalculado = 'Sobrante';
-
-    if (filtroEstado !== 'Todos' && estadoCalculado !== filtroEstado) {
+    if (filtroEstado !== 'Todos' && c.estadoArqueo !== filtroEstado) {
       return false;
     }
 
@@ -188,6 +183,7 @@ useEffect(() => {
           >
             <option value="Todos">Todos los estados</option>
             <option value="Cuadrado">Cuadrado</option>
+            <option value="Déficit / Pérdida">Déficit / Pérdida</option>
             <option value="Faltante">Faltante</option>
             <option value="Sobrante">Sobrante</option>
           </select>
@@ -233,16 +229,14 @@ useEffect(() => {
             ) : (
               cierresFiltrados.map((c) => {
                 const dif = c.diferenciaCalculada;
-                let badgeEstilo = "bg-emerald-500/10 text-emerald-400";
-                let textoEstado = "Cuadrado";
-
-                if (dif < -0.01) {
-                  badgeEstilo = "bg-rose-500/10 text-rose-400";
-                  textoEstado = "Faltante";
-                } else if (dif > 0.01) {
-                  badgeEstilo = "bg-amber-500/10 text-amber-400";
-                  textoEstado = "Sobrante";
-                }
+                const textoEstado = c.estadoArqueo;
+                const badgeEstilo = textoEstado === 'Déficit / Pérdida'
+                  ? 'bg-red-950/20 text-red-800 border border-red-800/40 dark:text-red-400'
+                  : textoEstado === 'Faltante'
+                    ? 'bg-rose-500/10 text-rose-400'
+                    : textoEstado === 'Sobrante'
+                      ? 'bg-amber-500/10 text-amber-500'
+                      : 'bg-emerald-500/10 text-emerald-400';
 
                 return (
                   <tr key={c.id} className="hover:bg-gray-50/40 dark:hover:bg-white/2 transition-colors">
@@ -255,8 +249,13 @@ useEffect(() => {
                     <td className="p-4 text-right text-rose-500">
                       <span className="notranslate" translate="no">S/ {Number(c.egresos_sistema || 0).toFixed(2)}</span>
                     </td>
-                    <td className={`p-4 text-right font-bold ${Math.abs(dif) <= 0.01 ? 'opacity-40' : dif < 0 ? 'text-rose-500' : 'text-amber-500'}`}>
-                      <span className="notranslate" translate="no">S/ {Number(dif || 0).toFixed(2)}</span>
+                    <td className={`p-4 text-right font-bold ${textoEstado === 'Déficit / Pérdida' || textoEstado === 'Faltante' ? 'text-rose-500' : textoEstado === 'Sobrante' ? 'text-amber-500' : 'text-emerald-500'}`}>
+                      <span className="block notranslate" translate="no">S/ {Number(dif || 0).toFixed(2)}</span>
+                      {textoEstado === 'Déficit / Pérdida' && (
+                        <span className="block text-[10px] font-semibold text-red-800 dark:text-red-400 notranslate" translate="no">
+                          Déficit: S/ {Number(c.deficitGlobal || 0).toFixed(2)}
+                        </span>
+                      )}
                     </td>
                     <td className="p-4 text-center">
                       <span className={`px-2.5 py-1 text-[10px] uppercase font-bold rounded-sm tracking-wider ${badgeEstilo}`}>
@@ -345,8 +344,12 @@ useEffect(() => {
                 </div>
                 <div className="p-2 bg-black/10 dark:bg-white/5 border border-gray-200 dark:border-gray-800 rounded-sm">
                   <span className="block text-[9px] uppercase tracking-wider text-gray-400 font-bold">Diferencia Final</span>
-                  <span className={`text-sm font-bold ${Math.abs(cierreSeleccionado.diferenciaCalculada) <= 0.01 ? 'text-gray-400' : cierreSeleccionado.diferenciaCalculada < 0 ? 'text-rose-500' : 'text-amber-500'}`}>
-                    <span className="notranslate" translate="no">S/ {Number(cierreSeleccionado.diferenciaCalculada || 0).toFixed(2)}</span>
+                  <span className={`text-sm font-bold ${cierreSeleccionado.estadoArqueo === 'Déficit / Pérdida' ? 'text-red-800 dark:text-red-400' : cierreSeleccionado.estadoArqueo === 'Faltante' ? 'text-rose-500' : cierreSeleccionado.estadoArqueo === 'Sobrante' ? 'text-amber-500' : 'text-emerald-500'}`}>
+                    {cierreSeleccionado.estadoArqueo}
+                    <span className="block notranslate" translate="no">Diferencia: S/ {Number(cierreSeleccionado.diferenciaCalculada || 0).toFixed(2)}</span>
+                    {cierreSeleccionado.estadoArqueo === 'Déficit / Pérdida' && (
+                      <span className="block text-xs notranslate" translate="no">Déficit: S/ {Number(cierreSeleccionado.deficitGlobal || 0).toFixed(2)}</span>
+                    )}
                   </span>
                 </div>
               </div>

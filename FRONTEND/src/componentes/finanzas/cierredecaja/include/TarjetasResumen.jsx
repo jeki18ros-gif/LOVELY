@@ -38,12 +38,12 @@ export default function TarjetasResumen({
       </div>
 
       {/* 3. GANANCIA NETA DEL DÍA */}
-      <div className="bg-white dark:bg-[#141414] p-6 border-b-2 border-[#D4AF37] shadow-xl rounded-sm">
+      <div className={`bg-white dark:bg-[#141414] p-6 border-b-2 ${gananciaDia < 0 ? 'border-rose-600' : 'border-[#D4AF37]'} shadow-xl rounded-sm`}>
         <div className="flex justify-between items-start mb-4">
           <p className="text-xs uppercase tracking-widest text-gray-500">Ganancia Neta (Día)</p>
-          <Wallet className="text-[#D4AF37]" size={20} />
+          <Wallet className={gananciaDia < 0 ? 'text-rose-600' : 'text-[#D4AF37]'} size={20} />
         </div>
-        <h2 className="text-2xl font-semibold tracking-tight">
+        <h2 className={`text-2xl font-semibold tracking-tight ${gananciaDia < 0 ? 'text-rose-600 dark:text-rose-400' : ''}`}>
           <span className="notranslate" translate="no">S/ {gananciaDia.toFixed(2)}</span>
         </h2>
       </div>

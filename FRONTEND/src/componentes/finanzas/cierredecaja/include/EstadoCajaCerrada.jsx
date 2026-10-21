@@ -4,6 +4,9 @@ import { CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 export default function EstadoCajaCerrada({ 
   fechaSeleccionada, 
   hayNuevosMovimientos, 
+  estadoCuadre,
+  diferencia,
+  deficitGlobal = 0,
   onReabrirCaja 
 }) {
   return (
@@ -28,6 +31,20 @@ export default function EstadoCajaCerrada({
         <h2 className="text-xl font-semibold uppercase tracking-[0.2em] text-black dark:text-white">
           {hayNuevosMovimientos ? 'Nuevos Movimientos Detectados' : 'Caja Cerrada'}
         </h2>
+
+        <div className={`mt-4 rounded-sm border p-3 ${estadoCuadre === 'Déficit / Pérdida'
+          ? 'border-red-800/40 bg-red-950/15 text-red-800 dark:text-red-400'
+          : estadoCuadre === 'Faltante'
+            ? 'border-rose-500/30 bg-rose-500/10 text-rose-500'
+            : estadoCuadre === 'Sobrante'
+              ? 'border-amber-500/30 bg-amber-500/10 text-amber-600'
+              : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-500'}`}>
+          <p className="text-sm font-bold uppercase">{estadoCuadre}</p>
+          <p className="mt-1 text-xs notranslate" translate="no">Diferencia: S/ {Number(diferencia || 0).toFixed(2)}</p>
+          {estadoCuadre === 'Déficit / Pérdida' && (
+            <p className="text-xs notranslate" translate="no">Déficit no cubierto: S/ {Number(deficitGlobal || 0).toFixed(2)}</p>
+          )}
+        </div>
 
         {/* DETALLE DEL MENSAJE */}
         {hayNuevosMovimientos ? (

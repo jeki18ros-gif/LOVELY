@@ -1,7 +1,7 @@
 import React from 'react';
-import { ArrowUpRight, ArrowDownLeft, PlusCircle } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, PlusCircle, AlertTriangle, Wallet } from 'lucide-react';
 
-export default function SeccionExtras({ ingresosExtras = 0, egresos = 0 }) {
+export default function SeccionExtras({ ingresosExtras = 0, egresos = 0, deficitGlobal = 0, deficitCanales = 0 }) {
   const balanceExtras = ingresosExtras - egresos;
 
   return (
@@ -13,7 +13,7 @@ export default function SeccionExtras({ ingresosExtras = 0, egresos = 0 }) {
         </h4>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 text-sm">
         {/* Ingresos Extras */}
         <div className="flex items-center justify-between p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-sm">
           <div className="flex items-center gap-2">
@@ -47,6 +47,26 @@ export default function SeccionExtras({ ingresosExtras = 0, egresos = 0 }) {
           </span>
           <span className={`font-bold ${balanceExtras >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
             <span className="notranslate" translate="no">{balanceExtras >= 0 ? '+' : ''} S/ {balanceExtras.toFixed(2)}</span>
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between p-3 bg-rose-950/10 border border-rose-700/30 rounded-sm">
+          <div className="flex items-center gap-2">
+            <AlertTriangle size={16} className="text-rose-700 dark:text-rose-500" />
+            <span className="text-xs font-medium text-rose-800 dark:text-rose-300">Déficit global no cubierto</span>
+          </div>
+          <span className="font-bold text-rose-800 dark:text-rose-400 notranslate" translate="no">
+            S/ {Number(deficitGlobal).toFixed(2)}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between p-3 bg-rose-950/5 border border-rose-700/20 rounded-sm">
+          <div className="flex items-center gap-2">
+            <Wallet size={16} className="text-rose-700 dark:text-rose-500" />
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-300">Déficit acumulado por canal</span>
+          </div>
+          <span className="font-bold text-rose-700 dark:text-rose-400 notranslate" translate="no">
+            S/ {Number(deficitCanales).toFixed(2)}
           </span>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowRightLeft } from 'lucide-react';
+import { calcularArqueo, calcularEsperadoCanal } from '../cuadreCaja';
 
 export default function TablaCuadre({ metodos, valoresContados, onInputChange, baseInicial = 0 }) {
   return (
@@ -18,6 +19,7 @@ export default function TablaCuadre({ metodos, valoresContados, onInputChange, b
             <th className="p-4 text-right">Monto en Sistema</th>
             <th className="p-4 text-center w-48">Monto Apps/Real Contado (S/)</th>
             <th className="p-4 text-right">Diferencia</th>
+            <th className="p-4 text-right">Déficit canal</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-sm">
@@ -25,11 +27,8 @@ export default function TablaCuadre({ metodos, valoresContados, onInputChange, b
             const contado = parseFloat(valoresContados[metodo]) || 0;
             
             // Si el método es efectivo, sumamos la base inicial al esperado en sistema
-            const esperado = metodo === 'efectivo' 
-              ? metodos[metodo] + Number(baseInicial) 
-              : metodos[metodo];
-
-            const dif = contado - esperado;
+            const { esperado, deficit } = calcularEsperadoCanal(metodo, metodos[metodo], baseInicial);
+            const { diferencia: dif } = calcularArqueo(esperado, contado);
 
             return (
               <tr key={metodo} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
@@ -54,11 +53,14 @@ export default function TablaCuadre({ metodos, valoresContados, onInputChange, b
                     dif === 0
                       ? 'opacity-40'
                       : dif > 0
-                      ? 'text-emerald-500'
+                      ? 'text-amber-500'
                       : 'text-rose-500'
                   }`}
                 >
                   <span className="notranslate" translate="no">{dif === 0 ? 'S/ 0.00' : `${dif > 0 ? '+' : ''} S/ ${dif.toFixed(2)}`}</span>
+                </td>
+                <td className="p-4 text-right font-semibold text-rose-500">
+                  <span className="notranslate" translate="no">{deficit > 0 ? `S/ ${deficit.toFixed(2)}` : 'S/ 0.00'}</span>
                 </td>
               </tr>
             );
