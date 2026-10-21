@@ -10,9 +10,15 @@ import {
   Eye,
   Edit2,
   AlertCircle,
-  Calendar // Añadido el icono de calendario
+  Calendar
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase'; 
+
+const obtenerFechaHoyPeru = () => {
+  const hoy = new Date();
+  hoy.setMinutes(hoy.getMinutes() - hoy.getTimezoneOffset());
+  return hoy.toISOString().split('T')[0];
+};
 
 const Ingresos = () => {
   const theme = {
@@ -21,19 +27,10 @@ const Ingresos = () => {
     goldBorder: 'border-[#D4AF37]',
   };
 
-
   const [ingresos, setIngresos] = useState([]);
   const [loading, setLoading] = useState(true);
-  // Ahora el filtro de fecha inicia con el día de hoy por defecto (YYYY-MM-DD)
- const obtenerFechaHoyPeru = () => {
-  const hoy = new Date();
-  hoy.setMinutes(hoy.getMinutes() - hoy.getTimezoneOffset());
-  return hoy.toISOString().split('T')[0];
-};
-
-const [filtroFecha, setFiltroFecha] = useState(
-  obtenerFechaHoyPeru()
-);
+  
+  const [filtroFecha, setFiltroFecha] = useState(obtenerFechaHoyPeru());
   const [filtroTipo, setFiltroTipo] = useState('Todos');
   const [filtroMetodo, setFiltroMetodo] = useState('Todos');
 
@@ -55,9 +52,7 @@ const [filtroFecha, setFiltroFecha] = useState(
   const [editMetodo, setEditMetodo] = useState('Efectivo');
   const [esVenta, setEsVenta] = useState(false);
 
-  // ==========================================
-  // 2. PETICIÓN FILTRADA POR FECHA A SUPABASE (ACTUALIZADO)
-  // ==========================================
+  // Función independiente para recargas manuales
   const fetchIngresos = async () => {
     setLoading(true);
     try {
@@ -81,21 +76,16 @@ const [filtroFecha, setFiltroFecha] = useState(
           )
         `);
 
-      // Si hay una fecha seleccionada, filtramos el día entero desde las 00:00:00 hasta las 23:59:59
-if (filtroFecha) {
-  const inicioLocal = new Date(`${filtroFecha}T00:00:00`);
-  const finLocal = new Date(`${filtroFecha}T23:59:59`);
+      if (filtroFecha) {
+        const inicioLocal = new Date(`${filtroFecha}T00:00:00`);
+        const finLocal = new Date(`${filtroFecha}T23:59:59`);
 
-  const inicioDia = inicioLocal.toISOString();
-  const finDia = finLocal.toISOString();
-
-  query = query
-    .gte('fecha', inicioDia)
-    .lte('fecha', finDia);
-}
+        query = query
+          .gte('fecha', inicioLocal.toISOString())
+          .lte('fecha', finLocal.toISOString());
+      }
 
       const { data, error } = await query;
-
       if (error) throw error;
       setIngresos(data || []);
     } catch (error) {
@@ -105,45 +95,97 @@ if (filtroFecha) {
     }
   };
 
-  // Se vuelve a ejecutar automáticamente cada vez que cambia la 'filtroFecha'
+  // Carga reactiva filtrada por fecha encapsulada en el efecto
   useEffect(() => {
-    fetchIngresos();
+    let isMounted = true;
+
+    const cargarIngresosEnEfecto = async () => {
+      setLoading(true);
+      try {
+        let query = supabase
+          .from('pago')
+          .select(`
+            id,
+            tipo,
+            descripcion,
+            monto,
+            fecha,
+            codigo_venta,
+            ventas!codigo_venta(
+              id,
+              fecha,
+              nombre_cliente,
+              detalle_venta (
+                tipo,
+                subtotal
+              )
+            )
+          `);
+
+        if (filtroFecha) {
+          const inicioLocal = new Date(`${filtroFecha}T00:00:00`);
+          const finLocal = new Date(`${filtroFecha}T23:59:59`);
+
+          query = query
+            .gte('fecha', inicioLocal.toISOString())
+            .lte('fecha', finLocal.toISOString());
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        if (isMounted) {
+          setIngresos(data || []);
+        }
+      } catch (error) {
+        console.error('Error cargando ingresos:', error.message);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    cargarIngresosEnEfecto();
+
+    return () => {
+      isMounted = false;
+    };
   }, [filtroFecha]);
 
- const handleSaveIngresoExtra = async (e) => {
-  e.preventDefault();
-  if (!nuevoMonto || parseFloat(nuevoMonto) <= 0) return;
+  const handleSaveIngresoExtra = async (e) => {
+    e.preventDefault();
+    if (!nuevoMonto || parseFloat(nuevoMonto) <= 0) return;
 
-  try {
-    // Generar la fecha local exacta (YYYY-MM-DDTHH:mm:ss)
-    const hoy = new Date();
-    const offset = hoy.getTimezoneOffset() * 60000;
-    const fechaLocalISO = new Date(hoy.getTime() - offset).toISOString();
+    try {
+      const hoy = new Date();
+      const offset = hoy.getTimezoneOffset() * 60000;
+      const fechaLocalISO = new Date(hoy.getTime() - offset).toISOString();
 
-    const { error } = await supabase
-      .from('pago')
-      .insert([
-        {
-          monto: parseFloat(nuevoMonto),
-          tipo: nuevoMetodo,
-          descripcion: nuevaDesc || 'Ingreso Extra',
-          codigo_venta: null,
-          fecha: fechaLocalISO // Usamos la fecha local corregida
-        }
-      ]);
+      const { error } = await supabase
+        .from('pago')
+        .insert([
+          {
+            monto: parseFloat(nuevoMonto),
+            tipo: nuevoMetodo,
+            descripcion: nuevaDesc || 'Ingreso Extra',
+            codigo_venta: null,
+            fecha: fechaLocalISO
+          }
+        ]);
 
-    if (error) throw error;
+      if (error) throw error;
 
-    setNuevoMonto('');
-    setNuevaDesc('');
-    setNuevoMetodo('Efectivo');
-    setIsModalOpen(false);
-    fetchIngresos(); 
-  } catch (error) {
-    console.error('Error al guardar ingreso extra:', error.message);
-    alert('No se pudo registrar el ingreso extra');
-  }
-};
+      setNuevoMonto('');
+      setNuevaDesc('');
+      setNuevoMetodo('Efectivo');
+      setIsModalOpen(false);
+      await fetchIngresos(); 
+    } catch (error) {
+      console.error('Error al guardar ingreso extra:', error.message);
+      alert('No se pudo registrar el ingreso extra');
+    }
+  };
 
   const handleAbirEdicion = (ingreso) => {
     setEditId(ingreso.id);
@@ -176,18 +218,18 @@ if (filtroFecha) {
       if (error) throw error;
 
       setIsEditModalOpen(false);
-      fetchIngresos();
+      await fetchIngresos();
     } catch (error) {
       console.error('Error al corregir el ingreso:', error.message);
       alert('No se pudieron actualizar los datos del ingreso');
     }
   };
 
-const limpiarFiltros = () => {
-  setFiltroFecha(obtenerFechaHoyPeru());
-  setFiltroTipo('Todos');
-  setFiltroMetodo('Todos');
-};
+  const limpiarFiltros = () => {
+    setFiltroFecha(obtenerFechaHoyPeru());
+    setFiltroTipo('Todos');
+    setFiltroMetodo('Todos');
+  };
 
   const obtenerTipoReal = (item) => {
     if (!item.codigo_venta) return 'Extra';
@@ -202,7 +244,6 @@ const limpiarFiltros = () => {
     return 'Servicio'; 
   };
 
-  // Removido el filtro de fecha de aquí ya que ahora se procesa directamente en la consulta de Supabase
   const ingresosFiltrados = ingresos.filter(item => {
     const tipoItem = obtenerTipoReal(item);
     const cumpleTipo = filtroTipo === 'Todos' ? true : tipoItem === filtroTipo;
@@ -274,6 +315,7 @@ const limpiarFiltros = () => {
         </h1>
 
         <button 
+          type="button"
           onClick={() => setIsModalOpen(true)}
           className={`${theme.goldBg} text-black px-6 py-2.5 rounded-sm flex items-center gap-2 hover:brightness-110 transition-all font-medium uppercase text-sm tracking-tighter`}
         >
@@ -310,7 +352,6 @@ const limpiarFiltros = () => {
       {/* Filtros */}
       <div className="bg-white dark:bg-[#141414] p-6 mb-8 rounded-sm shadow-sm border border-gray-200 dark:border-gray-800">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-          {/* CALENDARIO CONECTADO DIRECTAMENTE A SUPABASE */}
           <div>
             <label className="block text-[10px] uppercase tracking-widest mb-2 opacity-60 flex items-center gap-1">
               <Calendar size={12} className={theme.gold} /> Día Específico
@@ -354,6 +395,7 @@ const limpiarFiltros = () => {
           </div>
 
           <button 
+            type="button"
             onClick={limpiarFiltros}
             className="flex items-center justify-center gap-2 text-xs uppercase tracking-widest opacity-70 hover:opacity-100 transition-opacity pb-2"
           >
@@ -420,6 +462,7 @@ const limpiarFiltros = () => {
 
                     <td className="p-4 text-sm text-center flex items-center justify-center gap-2">
                       <button
+                        type="button"
                         onClick={() => handleVerDetalle(row)}
                         className="text-gray-400 hover:text-[#D4AF37] transition-colors p-1"
                         title="Ver Desglose Especifico"
@@ -428,6 +471,7 @@ const limpiarFiltros = () => {
                       </button>
 
                       <button
+                        type="button"
                         onClick={() => handleAbirEdicion(row)}
                         className="text-gray-400 hover:text-blue-400 transition-colors p-1"
                         title="Corregir datos de venta"
@@ -456,7 +500,7 @@ const limpiarFiltros = () => {
               <h3 className="text-lg font-light uppercase tracking-widest text-black dark:text-white">
                 Registrar Ingreso Extra
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="opacity-50 hover:opacity-100">
+              <button type="button" onClick={() => setIsModalOpen(false)} className="opacity-50 hover:opacity-100">
                 <X size={20} />
               </button>
             </div>
@@ -515,7 +559,11 @@ const limpiarFiltros = () => {
                 >
                   Guardar Ingreso
                 </button>
-              </div>  </form>  </div> </div> )}
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* MODAL EDICIÓN */}
       {isEditModalOpen && (
@@ -525,7 +573,7 @@ const limpiarFiltros = () => {
               <h3 className="text-lg font-light uppercase tracking-widest text-black dark:text-white">
                 Corregir Datos del Ingreso
               </h3>
-              <button onClick={() => setIsEditModalOpen(false)} className="opacity-50 hover:opacity-100">
+              <button type="button" onClick={() => setIsEditModalOpen(false)} className="opacity-50 hover:opacity-100">
                 <X size={20} />
               </button>
             </div>
@@ -596,7 +644,11 @@ const limpiarFiltros = () => {
                 >
                   Actualizar Datos
                 </button>
-              </div> </form> </div> </div> )}
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* MODAL DETALLE ESPECÍFICO DEL INGRESO */}
       {isDetailModalOpen && selectedIngreso && (
@@ -606,7 +658,7 @@ const limpiarFiltros = () => {
               <h3 className="text-md font-medium uppercase tracking-widest text-black dark:text-white">
                 Detalle del Ingreso
               </h3>
-              <button onClick={() => setIsDetailModalOpen(false)} className="opacity-50 hover:opacity-100">
+              <button type="button" onClick={() => setIsDetailModalOpen(false)} className="opacity-50 hover:opacity-100">
                 <X size={18} />
               </button>
             </div>
@@ -633,7 +685,8 @@ const limpiarFiltros = () => {
                   <p className="text-sm font-light font-mono mt-0.5 text-[#D4AF37]">
                     {selectedIngreso.codigo_venta || 'N/A'}
                   </p>
-                </div> </div>
+                </div>
+              </div>
 
               <div className="border-t border-b border-gray-100 dark:border-gray-800 py-3 my-2 space-y-2">
                 <span className="block text-[10px] uppercase tracking-widest opacity-50 mb-1">Desglose Específico</span>
@@ -657,7 +710,9 @@ const limpiarFiltros = () => {
                       </span>
                       <span className="font-medium">S/ {selectedIngreso.desgloseProductos.toFixed(2)}</span>
                     </div>
-                  </> )} </div>
+                  </>
+                )}
+              </div>
 
               <div className="flex justify-between items-center pt-2">
                 <div>
@@ -667,15 +722,24 @@ const limpiarFiltros = () => {
                 <div className="text-right">
                   <span className="block text-[10px] uppercase tracking-widest opacity-50">Monto Total Cobrado</span>
                   <p className={`text-xl font-bold ${theme.gold}`}>S/ {Number(selectedIngreso.monto).toFixed(2)}</p>
-                </div> </div> </div>
+                </div>
+              </div>
+            </div>
 
             <div className="mt-6">
               <button 
+                type="button"
                 onClick={() => setIsDetailModalOpen(false)}
                 className="w-full border border-gray-300 dark:border-gray-700 py-2.5 text-xs uppercase tracking-widest hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
                 Cerrar Detalle
               </button>
-            </div>  </div> </div> )} </div> );};
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default Ingresos;

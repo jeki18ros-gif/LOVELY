@@ -11,6 +11,13 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase'; 
 
+// Función auxiliar pura colocada fuera del componente
+const getFechaActualLocal = () => {
+  const hoy = new Date();
+  const tzoffset = hoy.getTimezoneOffset() * 60000; 
+  return new Date(hoy.getTime() - tzoffset).toISOString().slice(0, 10);
+};
+
 const Egresos = () => {
   const theme = {
     gold: 'text-[#D4AF37]',
@@ -18,17 +25,10 @@ const Egresos = () => {
     goldBorder: 'border-[#D4AF37]',
   };
 
-  // Función auxiliar para obtener la fecha actual en formato YYYY-MM-DD (Local)
-  const getFechaActualLocal = () => {
-    const tzoffset = (new Date()).getTimezoneOffset() * 60000; 
-    const localISOTime = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
-    return localISOTime;
-  };
-
   // ESTADOS PARA DATOS Y FILTROS
   const [egresos, setEgresos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filtroFecha, setFiltroFecha] = useState(getFechaActualLocal());
+  const [filtroFecha, setFiltroFecha] = useState(() => getFechaActualLocal());
   const [filtroCategoria, setFiltroCategoria] = useState('Todos');
 
   // ESTADOS PARA EL MODAL DE NUEVO EGRESO
@@ -46,6 +46,7 @@ const Egresos = () => {
   const [editCat, setEditCat] = useState('Compra de Productos');
   const [editMetodo, setEditMetodo] = useState('Efectivo');
 
+  // Función independiente para recargas manuales (después de crear o actualizar)
   const fetchEgresos = async () => {
     setLoading(true);
     try {
@@ -63,17 +64,45 @@ const Egresos = () => {
     }
   };
 
+  // Carga inicial segura encapsulada dentro del efecto
   useEffect(() => {
-    fetchEgresos();
+    let isMounted = true;
+
+    const cargarEgresosInicial = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('egresos')
+          .select('*')
+          .order('fecha', { ascending: false });
+
+        if (error) throw error;
+
+        if (isMounted) {
+          setEgresos(data || []);
+        }
+      } catch (error) {
+        console.error('Error cargando egresos:', error.message);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    cargarEgresosInicial();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  // 1. GUARDAR NUEVO EGRESO CON FECHA LOCAL CORREGIDA
+  // GUARDAR NUEVO EGRESO CON FECHA LOCAL CORREGIDA
   const handleSaveEgreso = async (e) => {
     e.preventDefault();
     if (!nuevoMonto || parseFloat(nuevoMonto) <= 0) return;
 
     try {
-      // Ajuste de zona horaria local para evitar saltos de día en UTC
       const hoy = new Date();
       const offset = hoy.getTimezoneOffset() * 60000;
       const fechaLocalISO = new Date(hoy.getTime() - offset).toISOString();
@@ -86,7 +115,7 @@ const Egresos = () => {
             categoria: nuevaCat,
             descripcion: nuevaDesc,
             metodo_pago: nuevoMetodo,
-            fecha: fechaLocalISO // Envia la fecha local exacta
+            fecha: fechaLocalISO
           }
         ]);
 
@@ -97,7 +126,7 @@ const Egresos = () => {
       setNuevaCat('Compra de Productos');
       setNuevoMetodo('Efectivo');
       setIsModalOpen(false);
-      fetchEgresos(); 
+      await fetchEgresos(); 
     } catch (error) {
       console.error('Error al guardar egreso:', error.message);
       alert('No se pudo registrar el egreso');
@@ -113,7 +142,7 @@ const Egresos = () => {
     setIsEditModalOpen(true);
   };
 
-  // 2. ACTUALIZAR EGRESO EXISTENTE
+  // ACTUALIZAR EGRESO EXISTENTE
   const handleUpdateEgreso = async (e) => {
     e.preventDefault();
     if (!editMonto || parseFloat(editMonto) <= 0) return;
@@ -132,7 +161,7 @@ const Egresos = () => {
       if (error) throw error;
 
       setIsEditModalOpen(false);
-      fetchEgresos();
+      await fetchEgresos();
     } catch (error) {
       console.error('Error al actualizar el egreso:', error.message);
       alert('No se pudieron guardar los cambios del egreso');
@@ -174,6 +203,7 @@ const Egresos = () => {
         </h1>
 
         <button 
+          type="button"
           onClick={() => setIsModalOpen(true)}
           className={`${theme.goldBg} text-black px-6 py-2.5 rounded-sm flex items-center gap-2 hover:brightness-110 transition-all font-medium uppercase text-sm tracking-tighter`}
         >
@@ -236,6 +266,7 @@ const Egresos = () => {
           </div>
 
           <button 
+            type="button"
             onClick={limpiarFiltros}
             className="flex items-center justify-center gap-2 text-xs uppercase tracking-widest opacity-70 hover:opacity-100 transition-opacity pb-2"
           >
@@ -288,12 +319,13 @@ const Egresos = () => {
                       {row.descripcion}
                     </td>
                     <td className="p-4 text-sm font-bold text-right text-rose-500 dark:text-rose-400">
-                      - S/ {window.isNaN(Number(row.monto)) ? "0.00" : Number(row.monto).toFixed(2)}
+                      - S/ {Number.isNaN(Number(row.monto)) ? "0.00" : Number(row.monto).toFixed(2)}
                     </td>
                     <td className="p-4 text-sm font-light italic">{row.metodo_pago}</td>
                     
                     <td className="p-4 text-sm text-center">
                       <button
+                        type="button"
                         onClick={() => handleAbrirEdicion(row)}
                         className="text-gray-400 hover:text-blue-400 transition-colors p-1"
                         title="Corregir datos de egreso"
@@ -322,7 +354,7 @@ const Egresos = () => {
               <h3 className="text-lg font-light uppercase tracking-widest text-black dark:text-white">
                 Registrar Nuevo Egreso
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="opacity-50 hover:opacity-100 transition-opacity">
+              <button type="button" onClick={() => setIsModalOpen(false)} className="opacity-50 hover:opacity-100 transition-opacity">
                 <X size={20} />
               </button>
             </div>
@@ -408,7 +440,7 @@ const Egresos = () => {
               <h3 className="text-lg font-light uppercase tracking-widest text-black dark:text-white">
                 Corregir Egreso
               </h3>
-              <button onClick={() => setIsEditModalOpen(false)} className="opacity-50 hover:opacity-100 transition-opacity">
+              <button type="button" onClick={() => setIsEditModalOpen(false)} className="opacity-50 hover:opacity-100 transition-opacity">
                 <X size={20} />
               </button>
             </div>
@@ -463,7 +495,7 @@ const Egresos = () => {
                   <option value="Tarjeta">Tarjeta</option>
                 </select>
               </div>
-              
+
               <div className="pt-4 flex gap-3">
                 <button 
                   type="button"
