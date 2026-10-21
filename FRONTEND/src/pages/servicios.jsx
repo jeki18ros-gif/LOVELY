@@ -19,52 +19,58 @@ const Servicios = () => {
     estado: ''
   });
 
-  // OBTENER CATEGORÍAS
-  const obtenerCategorias = async () => {
-
-    const { data, error } = await supabase
-      .from('categorias')
-      .select('*')
-      .eq('tipo', 'servicio');
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    setCategorias(data || []);
-  };
-
+  // OBTENER CATEGORÍAS (EN CAPSULADO EN EFFECT)
   useEffect(() => {
+    let isMounted = true;
+
+    const obtenerCategorias = async () => {
+      const { data, error } = await supabase
+        .from('categorias')
+        .select('*')
+        .eq('tipo', 'servicio');
+
+      if (error) {
+        console.error("Error obteniendo categorías de servicios:", error);
+        return;
+      }
+
+      if (isMounted) {
+        setCategorias(data || []);
+      }
+    };
+
     obtenerCategorias();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // CREAR SERVICIO
- const handleSubmit = async (data) => {
+  const handleSubmit = async (data) => {
+    const { error } = await supabase
+      .from('servicio')
+      .insert([
+        {
+          nombre: data.nombre,
+          descripcion: data.descripcion,
+          precio: Number(data.precio),
+          duracion: Number(data.duracion),
+          categoria_id: data.categoria_id,
+          estado: data.estado === 'activo',
+          imagen_url: data.imagen_url
+        }
+      ]);
 
-  const { error } = await supabase
-    .from('servicio')
-    .insert([
-      {
-        nombre: data.nombre,
-        descripcion: data.descripcion,
-        precio: Number(data.precio),
-        duracion: Number(data.duracion),
-        categoria_id: data.categoria_id,
-        estado: data.estado === 'activo',
-imagen_url: data.imagen_url
-      }
-    ]);
+    if (error) {
+      console.error("Error creando servicio:", error);
+      return;
+    }
 
-  if (error) {
-    console.error(error);
-    return;
-  }
+    setRefresh(prev => !prev);
+    setOpenModal(false);
+  };
 
-  setRefresh(prev => !prev);
-
-  setOpenModal(false);
-};
   return (
     <div
       className="
@@ -74,23 +80,18 @@ imagen_url: data.imagen_url
         transition-colors duration-300
       "
     >
-
       <div className="max-w-[1400px] mx-auto flex gap-6 items-stretch">
-
         {/* SIDEBAR */}
         <aside className="w-64 shrink-0">
-
           <div className="h-full">
             <CategorySidebar
               onCategoriaChange={setCategoriaSeleccionada}
             />
           </div>
-
         </aside>
 
         {/* MAIN */}
         <main className="flex-1 flex">
-
           <div
             className="
               w-full flex flex-col gap-6 p-6 rounded-xl shadow-xl
@@ -98,7 +99,6 @@ imagen_url: data.imagen_url
               border border-gray-200 dark:border-gray-800
             "
           >
-
             <ServicesHeader
               onOpenModal={() => setOpenModal(true)}
             />
@@ -109,17 +109,17 @@ imagen_url: data.imagen_url
             />
 
             <div className="flex-1 flex flex-col">
-
-           <ServiceTable
-  filters={filters}
-  categoriaSeleccionada={categoriaSeleccionada}
-  refresh={refresh}
-  categorias={categorias}
-/>
+              <ServiceTable
+                filters={filters}
+                categoriaSeleccionada={categoriaSeleccionada}
+                refresh={refresh}
+                categorias={categorias}
+              />
             </div>
           </div>
         </main>
       </div>
+
       {/* MODAL */}
       <FormularioT
         isOpen={openModal}
@@ -127,7 +127,6 @@ imagen_url: data.imagen_url
         onSubmit={handleSubmit}
         categorias={categorias}
       />
-
     </div>
   );
 };

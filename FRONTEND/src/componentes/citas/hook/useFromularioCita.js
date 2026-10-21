@@ -13,7 +13,7 @@ const generarHoras = () => {
 
 export const HORAS = generarHoras();
 
-export const useFormularioCita = (isOpen, onClose) => {
+export const useFormularioCita = (isOpen, onClose, onSubmit) => {
   const [clientes, setClientes] = useState([]);
   const [servicios, setServicios] = useState([]);
   const [horasOcupadas, setHorasOcupadas] = useState([]);
@@ -33,56 +33,77 @@ export const useFormularioCita = (isOpen, onClose) => {
     descripcion: '',
     estado: 'Pendiente'
   });
-
-  // Carga inicial
+// Carga inicial cuando se abre el modal
   useEffect(() => {
+    let isMounted = true;
+
+    const cargarDatosIniciales = async () => {
+      try {
+        const [resClientes, resServicios] = await Promise.all([
+          supabase.from("clientes").select("*").order("nombre"),
+          supabase.from("servicio").select("*").eq("estado", true).order("nombre")
+        ]);
+
+        if (isMounted) {
+          setClientes(resClientes.data || []);
+          setServicios(resServicios.data || []);
+        }
+      } catch (error) {
+        console.error("Error cargando datos iniciales:", error);
+      }
+    };
+
     if (isOpen) {
-      obtenerClientes();
-      obtenerServicios();
+      cargarDatosIniciales();
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [isOpen]);
 
-  // Actualizar disponibilidad cuando cambia la fecha
+  // 3. Carga de horas ocupadas encapsulada dentro de su efecto
   useEffect(() => {
-    if (formData.fecha) obtenerHorasOcupadas();
-  }, [formData.fecha]);
+    let isMounted = true;
 
-  const obtenerClientes = async () => {
-    const { data } = await supabase.from("clientes").select("*").order("nombre");
-    setClientes(data || []);
-  };
+    const obtenerHorasOcupadas = async () => {
+      const { data, error } = await supabase
+        .from("citas")
+        .select("hora_inicio, duracion_minutos")
+        .eq("fecha", formData.fecha)
+        .neq("estado", "Cancelada");
 
-  const obtenerServicios = async () => {
-    const { data } = await supabase.from("servicio").select("*").eq("estado", true).order("nombre");
-    setServicios(data || []);
-  };
+      if (error || !isMounted) return;
 
-  const obtenerHorasOcupadas = async () => {
-const { data, error } = await supabase
-  .from("citas")
-  .select("hora_inicio, duracion_minutos")
-  .eq("fecha", formData.fecha)
-  .neq("estado", "Cancelada");
+      const ocupadas = [];
+      data.forEach(cita => {
+        const [hora, minuto] = cita.hora_inicio.split(":").map(Number);
+        const inicio = new Date();
+        inicio.setHours(hora, minuto, 0);
 
-    if (error) return;
+        const fin = new Date(inicio);
+        fin.setMinutes(fin.getMinutes() + cita.duracion_minutos);
 
-    const ocupadas = [];
-    data.forEach(cita => {
-      const [hora, minuto] = cita.hora_inicio.split(":").map(Number);
-      const inicio = new Date();
-      inicio.setHours(hora, minuto, 0);
-      
-      const fin = new Date(inicio);
-      fin.setMinutes(fin.getMinutes() + cita.duracion_minutos);
+        let actual = new Date(inicio);
+        while (actual < fin) {
+          ocupadas.push(actual.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
+          actual.setMinutes(actual.getMinutes() + 30);
+        }
+      });
 
-      let actual = new Date(inicio);
-      while (actual < fin) {
-        ocupadas.push(actual.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
-        actual.setMinutes(actual.getMinutes() + 30);
+      if (isMounted) {
+        setHorasOcupadas(ocupadas);
       }
-    });
-    setHorasOcupadas(ocupadas);
-  };
+    };
+
+    if (formData.fecha) {
+      obtenerHorasOcupadas();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [formData.fecha]);
 
   const clientesFiltrados = useMemo(() => {
     if (!busquedaCliente || clienteSeleccionado) return [];
@@ -144,11 +165,25 @@ const { data, error } = await supabase
       return;
     }
 
+    onSubmit?.({ ...formData });
     setMensaje("Cita registrada correctamente");
     setTimeout(() => {
       onClose();
       setMensaje('');
-      setFormData({ /* reset inicial */ });
+      setFormData({
+        clienteId: null,
+        servicioId: null,
+        fecha: '',
+        horaInicio: '',
+        duracionMinutos: 0,
+        precio: 0,
+        descripcion: '',
+        estado: 'Pendiente'
+      });
+      setClienteSeleccionado(null);
+      setServicioSeleccionado(null);
+      setBusquedaCliente('');
+      setBusquedaServicio('');
     }, 1500);
   };
 

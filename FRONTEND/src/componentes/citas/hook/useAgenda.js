@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "../../../lib/supabase";
 
 export const useAgenda = (refreshKey) => {
@@ -6,7 +6,7 @@ export const useAgenda = (refreshKey) => {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [appointments, setAppointments] = useState([]);
 
-  const colores = [
+  const colores = useMemo(() => [
     'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800',
     'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800',
     'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800',
@@ -14,9 +14,9 @@ export const useAgenda = (refreshKey) => {
     'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-300 dark:border-cyan-800',
     'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
     'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800',
-  ];
+  ], []);
 
-  const obtenerColor = (hora) => {
+  const obtenerColor = useCallback((hora) => {
     const h = parseInt(hora.split(":")[0]);
     if (h < 10) return colores[0];
     if (h < 12) return colores[1];
@@ -25,80 +25,76 @@ export const useAgenda = (refreshKey) => {
     if (h < 18) return colores[4];
     if (h < 20) return colores[5];
     return colores[6];
-  };
+  }, [colores]);
 
-  const obtenerCitas = async () => {
-    const { data, error } = await supabase
-      .from("citas")
-      .select(`
-        *,
-        clientes:cliente_id (id, nombre),
-        servicio:servicio_id (id, nombre)
-      `)
-      .order("fecha", { ascending: true });
+  // Efecto unificado para Carga Inicial + Refresh Manual + Realtime
+  useEffect(() => {
+    let isMounted = true;
 
-    if (error) {
-      console.error("Error citas:", error);
-      return;
-    }
+    const obtenerCitas = async () => {
+      const { data, error } = await supabase
+        .from("citas")
+        .select(`
+          *,
+          clientes:cliente_id (id, nombre),
+          servicio:servicio_id (id, nombre)
+        `)
+        .order("fecha", { ascending: true });
 
-    const citasFormateadas = data.map(cita => {
-      const start = new Date(`${cita.fecha}T${cita.hora_inicio}`);
-      const fin = new Date(start);
-      fin.setMinutes(fin.getMinutes() + Number(cita.duracion_minutos));
-
-      return {
-        id: cita.id,
-        title: cita.clientes?.nombre || "Cliente",
-        service: cita.servicio?.nombre || "Servicio",
-        start: start,
-        end: fin,
-        duration: cita.duracion_minutos,
-        price: cita.precio,
-        notes: cita.notas,
-        status: cita.estado,
-        color: obtenerColor(cita.hora_inicio)
-      };
-    });
-
-    setAppointments(citasFormateadas);
-  };
-
-// carga inicial
-useEffect(() => {
-  obtenerCitas();
-}, []);
-
-// refresh manual
-useEffect(() => {
-  obtenerCitas();
-}, [refreshKey]);
-
-// realtime
-useEffect(() => {
-
-  const channel = supabase
-    .channel('citas-realtime')
-
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'citas'
-      },
-      () => {
-        obtenerCitas();
+      if (error) {
+        console.error("Error citas:", error);
+        return;
       }
-    )
 
-    .subscribe();
+      if (!isMounted) return;
 
-  return () => {
-    supabase.removeChannel(channel);
-  };
+      const citasFormateadas = data.map(cita => {
+        const start = new Date(`${cita.fecha}T${cita.hora_inicio}`);
+        const fin = new Date(start);
+        fin.setMinutes(fin.getMinutes() + Number(cita.duracion_minutos));
 
-}, []);
+        return {
+          id: cita.id,
+          title: cita.clientes?.nombre || "Cliente",
+          service: cita.servicio?.nombre || "Servicio",
+          start: start,
+          end: fin,
+          duration: cita.duracion_minutos,
+          price: cita.precio,
+          notes: cita.notas,
+          status: cita.estado,
+          color: obtenerColor(cita.hora_inicio)
+        };
+      });
+
+      setAppointments(citasFormateadas);
+    };
+
+    // Carga las citas
+    obtenerCitas();
+
+    // Suscripción Realtime a Supabase
+    const channel = supabase
+      .channel('citas-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'citas'
+        },
+        () => {
+          obtenerCitas();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, [refreshKey, obtenerColor]);
+
   const days = useMemo(() => {
     const start = new Date(currentWeek);
     const day = start.getDay();
@@ -116,28 +112,19 @@ useEffect(() => {
     });
   }, [currentWeek]);
 
-const visibleAppointments = useMemo(() => {
+  const visibleAppointments = useMemo(() => {
+    return appointments.filter(app => {
+      if (app.status === 'Cancelada') {
+        return false;
+      }
 
-  return appointments.filter(app => {
-
-    // OCULTAR CANCELADAS
-    if (app.status === 'Cancelada') {
-      return false;
-    }
-
-    return days.some(day => {
-
-      const dayString =
-        day.fullDate.toDateString();
-
-      const appString =
-        app.start.toDateString();
-
-      return dayString === appString;
+      return days.some(day => {
+        const dayString = day.fullDate.toDateString();
+        const appString = app.start.toDateString();
+        return dayString === appString;
+      });
     });
-  });
-
-}, [appointments, days]);
+  }, [appointments, days]);
 
   const hours = useMemo(() => {
     if (!visibleAppointments.length) {

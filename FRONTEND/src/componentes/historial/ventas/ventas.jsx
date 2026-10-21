@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Filter, Eye, Calendar, User, Search, X, ShoppingBag } from 'lucide-react';
+import { Filter, Eye, Calendar, User, Search, X, ShoppingBag, DollarSign } from 'lucide-react';
 import { supabase } from "../../../lib/supabase";
 
 export default function Ventas() {
@@ -32,23 +32,37 @@ export default function Ventas() {
   };
 
   // 1. Obtener Ventas desde Supabase
-  const fetchVentas = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('ventas')
-        .select('*')
-        .order('fecha', { ascending: false });
+ useEffect(() => {
+    let isMounted = true;
 
-      if (error) throw error;
-      setVentas(data || []);
-    } catch (error) {
-      console.error('Error cargando ventas:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const fetchVentas = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('ventas')
+          .select('*')
+          .order('fecha', { ascending: false });
 
+        if (error) throw error;
+
+        if (isMounted) {
+          setVentas(data || []);
+        }
+      } catch (error) {
+        console.error('Error cargando ventas:', error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchVentas();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
   // 2. Obtener Detalle de Venta al abrir el Modal
   const fetchDetalleVenta = async (codigoVenta) => {
     setLoadingDetalle(true);
@@ -66,11 +80,6 @@ export default function Ventas() {
       setLoadingDetalle(false);
     }
   };
-
-  useEffect(() => {
-    fetchVentas();
-  }, []);
-
   // Manejar apertura de detalles
   const handleVerDetalles = (venta) => {
     setVentaSeleccionada(venta);
@@ -79,30 +88,19 @@ export default function Ventas() {
 
   // Lógica de Filtrado en Frontend
   const ventasFiltradas = ventas.filter(v => {
-    // Filtrar por Método de Pago (método de pago dinámico según tu BD de cierres)
-    // Nota: Si en tu tabla ventas la columna método de pago se llama de otra forma o no está mapeada, 
-    // asumimos 'metodo_pago' basándonos en tu tabla de gastos/cierres. Si no existe en ventas, puedes omitir este filtro.
     if (filtroMetodo !== 'Todos' && v.metodo_pago !== filtroMetodo) return false;
 
-    // Filtrar por Búsqueda de Cliente
     if (busquedaCliente && v.nombre_cliente && !v.nombre_cliente.toLowerCase().includes(busquedaCliente.toLowerCase())) {
       return false;
     }
 
-// Filtrar por Rango de Fechas (Corregido con Zona Horaria Local)
     if (v.fecha) {
-      // 1. Creamos el objeto Date con la fecha de la BD
       const fechaObjeto = new Date(v.fecha);
-
-      // 2. Extraemos año, mes y día en la zona horaria del navegador del usuario
       const anio = fechaObjeto.getFullYear();
-      const mes = String(fechaObjeto.getMonth() + 1).padStart(2, '0'); // Los meses van de 0 a 11
+      const mes = String(fechaObjeto.getMonth() + 1).padStart(2, '0');
       const dia = String(fechaObjeto.getDate()).padStart(2, '0');
-
-      // 3. Formateamos como 'YYYY-MM-DD' local
       const fechaVentaLocalTexto = `${anio}-${mes}-${dia}`;
 
-      // 4. Comparamos los strings de forma segura
       if (fechaInicio && fechaVentaLocalTexto < fechaInicio) return false;
       if (fechaFin && fechaVentaLocalTexto > fechaFin) return false;
     }
@@ -110,56 +108,78 @@ export default function Ventas() {
     return true;
   });
 
+  // 💰 CALCULO DEL TOTAL GANADO (Se recalcula automáticamente al cambiar los filtros)
+  const totalGanado = ventasFiltradas.reduce((acc, v) => acc + Number(v.monto_total || 0), 0);
+
   return (
     <div className="p-6 bg-white dark:bg-[#141414] transition-colors">
       
-      {/* SECCIÓN DE FILTROS SUPERIORES */}
-      <div className="mb-6 p-4 bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 rounded-sm flex flex-wrap gap-6 items-center">
+      {/* SECCIÓN DE FILTROS Y TOTAL GANADO */}
+      <div className="mb-6 p-4 bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 rounded-sm flex flex-wrap gap-4 items-center justify-between">
         
-        <div className="flex items-center gap-2 text-xs uppercase tracking-widest font-semibold text-gray-500 dark:text-gray-400">
-          <Filter size={14} className="text-[#D4AF37]" />
-          Filtros de Venta:
+        {/* Contenedor Izquierdo: Filtros */}
+        <div className="flex flex-wrap gap-4 items-center">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-widest font-semibold text-gray-500 dark:text-gray-400">
+            <Filter size={14} className="text-[#D4AF37]" />
+            Filtros:
+          </div>
+
+          {/* Buscador de Cliente */}
+          <div className="flex items-center gap-2 text-xs bg-white dark:bg-[#141414] border border-gray-200 dark:border-gray-800 px-3 py-1.5 rounded-sm w-full sm:w-56">
+            <Search size={14} className="opacity-40" />
+            <input 
+              type="text" 
+              placeholder="Buscar por cliente..."
+              value={busquedaCliente}
+              onChange={(e) => setBusquedaCliente(e.target.value)}
+              className="bg-transparent outline-none w-full text-gray-600 dark:text-gray-300"
+            />
+          </div>
+
+          {/* Rango de Fechas */}
+          <div className="flex items-center gap-2 text-xs">
+            <Calendar size={14} className="opacity-50" />
+            <input 
+              type="date" 
+              value={fechaInicio} 
+              onChange={(e) => setFechaInicio(e.target.value)}
+              className="bg-transparent border-b border-gray-300 dark:border-gray-700 pb-0.5 outline-none focus:border-[#D4AF37] text-gray-600 dark:text-gray-300"
+            />
+            <span className="opacity-40 font-light">hasta</span>
+            <input 
+              type="date" 
+              value={fechaFin} 
+              onChange={(e) => setFechaFin(e.target.value)}
+              className="bg-transparent border-b border-gray-300 dark:border-gray-700 pb-0.5 outline-none focus:border-[#D4AF37] text-gray-600 dark:text-gray-300"
+            />
+          </div>
+
+          {/* Limpiar Filtros */}
+          {(busquedaCliente || fechaInicio || fechaFin || filtroMetodo !== 'Todos') && (
+            <button 
+              onClick={() => { setBusquedaCliente(''); setFechaInicio(''); setFechaFin(''); setFiltroMetodo('Todos'); }}
+              className="text-[10px] uppercase tracking-widest font-bold text-rose-500 hover:underline"
+            >
+              Limpiar
+            </button>
+          )}
         </div>
 
-        {/* Buscador de Cliente */}
-        <div className="flex items-center gap-2 text-xs bg-white dark:bg-[#141414] border border-gray-200 dark:border-gray-800 px-3 py-1.5 rounded-sm w-full sm:w-64">
-          <Search size={14} className="opacity-40" />
-          <input 
-            type="text" 
-            placeholder="Buscar por cliente..."
-            value={busquedaCliente}
-            onChange={(e) => setBusquedaCliente(e.target.value)}
-            className="bg-transparent outline-none w-full text-gray-600 dark:text-gray-300"
-          />
+        {/* 🏆 TARJETA DEL MONTO TOTAL GANADO (Esquina Superior Derecha) */}
+        <div className="flex items-center gap-3 bg-white dark:bg-[#141414] border border-[#D4AF37]/40 px-4 py-2 rounded-sm shadow-sm ml-auto sm:ml-0">
+          <div className="p-2 bg-[#D4AF37]/10 rounded-full text-[#D4AF37]">
+            <DollarSign size={16} />
+          </div>
+          <div>
+            <span className="block text-[9px] uppercase tracking-widest text-gray-400 font-bold">
+              Total Filtrado ({ventasFiltradas.length})
+            </span>
+            <span className="text-lg font-bold text-[#D4AF37] font-mono">
+              S/ {totalGanado.toFixed(2)}
+            </span>
+          </div>
         </div>
 
-        {/* Rango de Fechas */}
-        <div className="flex items-center gap-2 text-xs">
-          <Calendar size={14} className="opacity-50" />
-          <input 
-            type="date" 
-            value={fechaInicio} 
-            onChange={(e) => setFechaInicio(e.target.value)}
-            className="bg-transparent border-b border-gray-300 dark:border-gray-700 pb-0.5 outline-none focus:border-[#D4AF37] text-gray-600 dark:text-gray-300"
-          />
-          <span className="opacity-40 font-light">hasta</span>
-          <input 
-            type="date" 
-            value={fechaFin} 
-            onChange={(e) => setFechaFin(e.target.value)}
-            className="bg-transparent border-b border-gray-300 dark:border-gray-700 pb-0.5 outline-none focus:border-[#D4AF37] text-gray-600 dark:text-gray-300"
-          />
-        </div>
-
-        {/* Limpiar Filtros */}
-        {(busquedaCliente || fechaInicio || fechaFin || filtroMetodo !== 'Todos') && (
-          <button 
-            onClick={() => { setBusquedaCliente(''); setFechaInicio(''); setFechaFin(''); setFiltroMetodo('Todos'); }}
-            className="text-[10px] uppercase tracking-widest font-bold text-rose-500 hover:underline ml-auto"
-          >
-            Limpiar filtros
-          </button>
-        )}
       </div>
 
       {/* TABLA PRINCIPAL (VENTAS) */}
@@ -219,12 +239,11 @@ export default function Ventas() {
         </table>
       </div>
 
-      {/* MODAL DETALLE DE VENTA ("VER MÁS") */}
+      {/* MODAL DETALLE DE VENTA */}
       {ventaSeleccionada && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-[#111111] border border-gray-200 dark:border-gray-800 w-full max-w-2xl shadow-2xl rounded-sm overflow-hidden animate-fadeIn">
             
-            {/* Cabecera del Modal */}
             <div className="p-4 bg-gray-50 dark:bg-[#181818] border-b border-gray-200 dark:border-gray-800 flex justify-between items-center">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#D4AF37]">
                 <ShoppingBag size={14} /> Detalle de Artículos / Servicios
@@ -237,7 +256,6 @@ export default function Ventas() {
               </button>
             </div>
 
-            {/* Datos Generales de la Venta Abierta */}
             <div className="p-4 bg-gray-50/50 dark:bg-[#141414] border-b border-gray-100 dark:border-gray-800/80 grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
               <div>
                 <span className="block text-[10px] uppercase text-gray-400 tracking-wider">Código Comprobante</span>
@@ -253,7 +271,6 @@ export default function Ventas() {
               </div>
             </div>
 
-            {/* Contenido / Tabla del Detalle */}
             <div className="p-4 max-h-[350px] overflow-y-auto">
               {loadingDetalle ? (
                 <div className="p-8 text-center text-xs uppercase tracking-widest opacity-40">
@@ -295,7 +312,6 @@ export default function Ventas() {
               )}
             </div>
 
-            {/* Pie de Modal / Totalizador */}
             <div className="p-4 bg-gray-50 dark:bg-[#181818] border-t border-gray-200 dark:border-gray-800 flex justify-between items-center">
               <div className="text-left">
                 <span className="block text-[9px] uppercase tracking-wider text-gray-400 font-bold">Total Liquidado</span>

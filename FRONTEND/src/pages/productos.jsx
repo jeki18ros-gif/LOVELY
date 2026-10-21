@@ -9,14 +9,9 @@ import ProductTable from '../componentes/productos/tabla';
 import FormularioT from '../componentes/productos/formularios/formularioTabla';
 
 const Productos = () => {
-
   const [openModal, setOpenModal] = useState(false);
-
   const [refresh, setRefresh] = useState(false);
-
-  const [categoriaSeleccionada, setCategoriaSeleccionada] =
-    useState(null);
-
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(null);
   const [categorias, setCategorias] = useState([]);
 
   const [filters, setFilters] = useState({
@@ -27,34 +22,40 @@ const Productos = () => {
   });
 
   /* =========================
-     OBTENER CATEGORÍAS
+      OBTENER CATEGORÍAS
   ========================= */
 
-  const obtenerCategorias = async () => {
-
-    const { data, error } = await supabase
-      .from('categorias')
-      .select('*')
-      .eq('tipo', 'producto');
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    setCategorias(data || []);
-  };
-
   useEffect(() => {
+    let isMounted = true;
+
+    const obtenerCategorias = async () => {
+      const { data, error } = await supabase
+        .from('categorias')
+        .select('*')
+        .eq('tipo', 'producto');
+
+      if (error) {
+        console.error("Error obteniendo categorías:", error);
+        return;
+      }
+
+      if (isMounted) {
+        setCategorias(data || []);
+      }
+    };
+
     obtenerCategorias();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   /* =========================
-     CREAR PRODUCTO
+      CREAR PRODUCTO
   ========================= */
 
   const handleSubmit = async (data) => {
-
     const { error } = await supabase
       .from('producto')
       .insert([
@@ -71,12 +72,11 @@ const Productos = () => {
       ]);
 
     if (error) {
-      console.error(error);
+      console.error("Error creando producto:", error);
       return;
     }
 
     setRefresh(prev => !prev);
-
     setOpenModal(false);
   };
 
@@ -89,25 +89,18 @@ const Productos = () => {
         transition-colors duration-300
       "
     >
-
       <div className="max-w-[1400px] mx-auto flex gap-6 items-stretch">
-
         {/* SIDEBAR */}
         <aside className="w-64 shrink-0">
-
           <div className="h-full">
-
             <CategorySidebar
               onCategoriaChange={setCategoriaSeleccionada}
             />
-
           </div>
-
         </aside>
 
         {/* MAIN */}
         <main className="flex-1 flex">
-
           <div
             className="
               w-full flex flex-col gap-6 p-6 rounded-xl shadow-xl
@@ -115,7 +108,6 @@ const Productos = () => {
               border border-gray-200 dark:border-gray-800
             "
           >
-
             {/* HEADER */}
             <ProductsHeader
               onOpenModal={() => setOpenModal(true)}
@@ -129,20 +121,15 @@ const Productos = () => {
 
             {/* TABLA */}
             <div className="flex-1 flex flex-col">
-
               <ProductTable
                 filters={filters}
                 categoriaSeleccionada={categoriaSeleccionada}
                 refresh={refresh}
                 categorias={categorias}
               />
-
             </div>
-
           </div>
-
         </main>
-
       </div>
 
       {/* MODAL NUEVO PRODUCTO */}
@@ -152,7 +139,6 @@ const Productos = () => {
         onSubmit={handleSubmit}
         categorias={categorias}
       />
-
     </div>
   );
 };

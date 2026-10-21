@@ -5,7 +5,7 @@ import { Landmark, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import CierreCaja from '../componentes/finanzas/cierredecaja/cierreCaja';
 import Egresos from '../componentes/finanzas/egresos/egresos'; // O la ruta exacta donde guardaste tus Egresos
 import Ingresos from '../componentes/finanzas/ingresos/ingresos'; // Tu componente de Ingresos / Ventas directas
-
+import ProgresoMensual from '../componentes/finanzas/progresomensual/ProgresoMensual'; // Tu componente de Progreso Mensual
 export default function FinanzasGeneral() {
   // Inicializa con 'cierre' para que sea la primera vista en renderizarse
   const [activeTab, setActiveTab] = useState('cierre');
@@ -32,6 +32,7 @@ export default function FinanzasGeneral() {
           { id: 'cierre', label: 'Cierres de Caja', icon: Landmark },
           { id: 'ingresos', label: 'Flujo de Ingresos', icon: ArrowUpRight },
           { id: 'egresos', label: 'Flujo de Egresos', icon: ArrowDownLeft },
+          { id: 'progreso', label: 'Progreso Mensual', icon: ArrowUpRight },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -69,6 +70,10 @@ export default function FinanzasGeneral() {
 
         {activeTab === 'egresos' && (
           <Egresos />
+        )}
+
+        {activeTab === 'progreso' && (
+          <ProgresoMensual />
         )}
 
       </div>

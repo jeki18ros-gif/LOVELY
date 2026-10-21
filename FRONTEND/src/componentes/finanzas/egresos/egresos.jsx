@@ -28,7 +28,6 @@ const Egresos = () => {
   // ESTADOS PARA DATOS Y FILTROS
   const [egresos, setEgresos] = useState([]);
   const [loading, setLoading] = useState(true);
-  // Inicializamos directamente con la fecha de hoy
   const [filtroFecha, setFiltroFecha] = useState(getFechaActualLocal());
   const [filtroCategoria, setFiltroCategoria] = useState('Todos');
 
@@ -47,9 +46,6 @@ const Egresos = () => {
   const [editCat, setEditCat] = useState('Compra de Productos');
   const [editMetodo, setEditMetodo] = useState('Efectivo');
 
-  // ==========================================
-  // 1. PETICIÓN A SUPABASE (TRAER EGRESOS)
-  // ==========================================
   const fetchEgresos = async () => {
     setLoading(true);
     try {
@@ -71,14 +67,17 @@ const Egresos = () => {
     fetchEgresos();
   }, []);
 
-  // ==========================================
-  // 2. LÓGICA DEL FORMULARIO: NUEVO EGRESO
-  // ==========================================
+  // 1. GUARDAR NUEVO EGRESO CON FECHA LOCAL CORREGIDA
   const handleSaveEgreso = async (e) => {
     e.preventDefault();
     if (!nuevoMonto || parseFloat(nuevoMonto) <= 0) return;
 
     try {
+      // Ajuste de zona horaria local para evitar saltos de día en UTC
+      const hoy = new Date();
+      const offset = hoy.getTimezoneOffset() * 60000;
+      const fechaLocalISO = new Date(hoy.getTime() - offset).toISOString();
+
       const { error } = await supabase
         .from('egresos')
         .insert([
@@ -86,7 +85,8 @@ const Egresos = () => {
             monto: parseFloat(nuevoMonto),
             categoria: nuevaCat,
             descripcion: nuevaDesc,
-            metodo_pago: nuevoMetodo 
+            metodo_pago: nuevoMetodo,
+            fecha: fechaLocalISO // Envia la fecha local exacta
           }
         ]);
 
@@ -104,9 +104,6 @@ const Egresos = () => {
     }
   };
 
-  // ==========================================
-  // LÓGICA DE EDICIÓN / CORRECCIÓN DE EGRESOS
-  // ==========================================
   const handleAbrirEdicion = (egreso) => {
     setEditId(egreso.id);
     setEditMonto(egreso.monto);
@@ -116,6 +113,7 @@ const Egresos = () => {
     setIsEditModalOpen(true);
   };
 
+  // 2. ACTUALIZAR EGRESO EXISTENTE
   const handleUpdateEgreso = async (e) => {
     e.preventDefault();
     if (!editMonto || parseFloat(editMonto) <= 0) return;
@@ -141,11 +139,7 @@ const Egresos = () => {
     }
   };
 
-  // ==========================================
-  // 3. FILTROS EN CLIENTE
-  // ==========================================
   const limpiarFiltros = () => {
-    // Al limpiar filtros, restablecemos el calendario al día de hoy
     setFiltroFecha(getFechaActualLocal());
     setFiltroCategoria('Todos');
   };
@@ -156,9 +150,6 @@ const Egresos = () => {
     return cumpleFecha && cumpleCat;
   });
 
-  // ==========================================
-  // 4. CÁLCULO DE LAS TARJETAS (RESUMEN SINCRONIZADO)
-  // ==========================================
   const totales = egresosFiltrados.reduce((acc, item) => {
     const montoNum = Number(item.monto || 0);
     acc.total += montoNum;
@@ -167,8 +158,6 @@ const Egresos = () => {
       acc.productos += montoNum;
     } else if (item.categoria === 'Pagos de Servicios' || item.categoria === 'Materiales') {
       acc.servicios += montoNum;
-    } else if (item.categoria === 'Imprevistos' || item.categoria === 'Devoluciones') {
-      acc.otros += montoNum; 
     } else {
       acc.otros += montoNum; 
     }
@@ -212,7 +201,7 @@ const Egresos = () => {
               <card.icon className={theme.gold} size={20} />
             </div>
             <h2 className="text-2xl font-semibold tracking-tight">
-              - S/ {card.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              - S/ {card.value.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </h2>
           </div>
         ))}
@@ -222,7 +211,7 @@ const Egresos = () => {
       <div className="bg-white dark:bg-[#141414] p-6 mb-8 rounded-sm shadow-sm border border-gray-200 dark:border-gray-800">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
           <div>
-            <label className="block text-[10px] uppercase tracking-widest mb-2 opacity-60">Rango de Fechas</label>
+            <label className="block text-[10px] uppercase tracking-widest mb-2 opacity-60">Fecha del Día</label>
             <input 
               type="date" 
               value={filtroFecha}
@@ -371,7 +360,7 @@ const Egresos = () => {
                 <input 
                   type="text" 
                   required
-                  placeholder="Ej: Pago recibo de luz LuzSur, Lote de tintes, etc."
+                  placeholder="Ej: Pago recibo de luz, Lote de productos, etc."
                   value={nuevaDesc}
                   onChange={(e) => setNuevaDesc(e.target.value)}
                   className="w-full bg-transparent border-b border-gray-300 dark:border-gray-700 p-2 text-sm focus:outline-none focus:border-[#D4AF37]"
@@ -474,7 +463,7 @@ const Egresos = () => {
                   <option value="Tarjeta">Tarjeta</option>
                 </select>
               </div>
-
+              
               <div className="pt-4 flex gap-3">
                 <button 
                   type="button"
@@ -494,7 +483,6 @@ const Egresos = () => {
           </div>
         </div>
       )}
-
     </div>
   );
 };

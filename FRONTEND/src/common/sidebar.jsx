@@ -26,20 +26,22 @@ const menuItems = [
 ];
 
 export default function Sidebar({ isOpen, setIsOpen }) {
-  const [dark, setDark] = useState(false);
-  const location = useLocation();
-const [openMenu, setOpenMenu] = useState(null);
-  useEffect(() => {
-    const saved = localStorage.getItem("theme");
+  // Inicialización perezosa del estado 'dark' desde localStorage
+  const [dark, setDark] = useState(() => {
+    return localStorage.getItem("theme") === "dark";
+  });
 
-    if (saved === "dark") {
+  const location = useLocation();
+  const [openMenu, setOpenMenu] = useState(null);
+
+  // Sincroniza la clase "dark" en el elemento HTML según el estado inicial
+  useEffect(() => {
+    if (dark) {
       document.documentElement.classList.add("dark");
-      setDark(true);
     } else {
       document.documentElement.classList.remove("dark");
-      setDark(false);
     }
-  }, []);
+  }, [dark]);
 
   return (
     <motion.div

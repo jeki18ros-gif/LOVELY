@@ -16,7 +16,7 @@ export default function CierreCaja() {
   // Estado para el sistema de notificaciones flotantes (Toasts)
   const [notificacion, setNotificacion] = useState({ visible: false, mensaje: '', tipo: 'info' });
 
-  // Formateador de fecha/hora para legibilidad premium
+  // Formateador de fecha/hora
   const formatFecha = (dateString) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
@@ -34,52 +34,98 @@ export default function CierreCaja() {
   };
 
   // Auto-cerrar la notificación después de 4 segundos
-  useEffect(() => {
-    if (notificacion.visible) {
-      const timer = setTimeout(() => {
-        setNotificacion(prev => ({ ...prev, visible: false }));
-      }, 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [notificacion.visible]);
+useEffect(() => {
+    let isMounted = true;
 
-  const fetchCierresCaja = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('cierre_caja')
-        .select('*')
-        .order('fecha_cierre', { ascending: false });
+    const fetchCierresCaja = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('cierre_caja')
+          .select('*')
+          .order('fecha_cierre', { ascending: false });
 
-      if (error) throw error;
+        if (error) throw error;
+        const cierresUnicosPorDia = {};
 
-      setCierresCaja(data || []);
-    } catch (error) {
-      console.error('Error cargando cierres:', error);
-      mostrarToast("Error al conectar con la base de datos de auditoría", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
+        (data || []).forEach((cierre) => {
+          const fechaStr = cierre.fecha_cierre || cierre.fecha_apertura;
+          if (!fechaStr) return;
 
-  useEffect(() => {
+          const claveDia = fechaStr.split('T')[0];
+
+          const totalContado = 
+            Number(cierre.efectivo_contado || 0) +
+            Number(cierre.yape_contado || 0) +
+            Number(cierre.plin_contado || 0) +
+            Number(cierre.tarjeta_contado || 0);
+
+          const saldoEsperado = 
+            Number(cierre.base_inicial || 0) + 
+            Number(cierre.ingresos_sistema || 0) - 
+            Number(cierre.egresos_sistema || 0);
+
+          const diferenciaCalculada = Number(
+            (totalContado - saldoEsperado).toFixed(2)
+          );
+
+          const cierreProcesado = {
+            ...cierre,
+            diferenciaCalculada,
+            totalContado
+          };
+
+          if (!cierresUnicosPorDia[claveDia]) {
+            cierresUnicosPorDia[claveDia] = cierreProcesado;
+          } else {
+            const fechaActual = new Date(cierreProcesado.fecha_cierre || 0);
+            const fechaExistente = new Date(cierresUnicosPorDia[claveDia].fecha_cierre || 0);
+            if (fechaActual > fechaExistente) {
+              cierresUnicosPorDia[claveDia] = cierreProcesado;
+            }
+          }
+        });
+
+        const listaFinal = Object.values(cierresUnicosPorDia).sort((a, b) => {
+          return new Date(b.fecha_cierre || 0) - new Date(a.fecha_cierre || 0);
+        });
+
+        if (isMounted) {
+          setCierresCaja(listaFinal);
+        }
+      } catch (error) {
+        console.error('Error cargando cierres:', error);
+        mostrarToast("Error al conectar con la base de datos de auditoría", "error");
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
     fetchCierresCaja();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  // Lógica de Filtrado
+  // Lógica de Filtrado por Estado y Fechas
   const cierresFiltrados = cierresCaja.filter(c => {
+    const dif = c.diferenciaCalculada;
     let estadoCalculado = 'Cuadrado';
-    if (c.diferencia < 0) estadoCalculado = 'Faltante';
-    if (c.diferencia > 0) estadoCalculado = 'Sobrante';
+    if (dif < -0.01) estadoCalculado = 'Faltante';
+    if (dif > 0.01) estadoCalculado = 'Sobrante';
 
     if (filtroEstado !== 'Todos' && estadoCalculado !== filtroEstado) {
       return false;
     }
 
-    if (c.fecha_apertura) {
-      const fechaCierreMs = new Date(c.fecha_apertura).getTime();
-      if (fechaInicio && fechaCierreMs < new Date(fechaInicio).getTime()) return false;
-      if (fechaFin && fechaCierreMs > new Date(fechaFin + 'T23:59:59').getTime()) return false;
+    const fechaBase = c.fecha_cierre || c.fecha_apertura;
+    if (fechaBase) {
+      const claveFechaCierre = fechaBase.split('T')[0];
+      if (fechaInicio && claveFechaCierre < fechaInicio) return false;
+      if (fechaFin && claveFechaCierre > fechaFin) return false;
     }
 
     return true;
@@ -147,7 +193,7 @@ export default function CierreCaja() {
           </select>
         </div>
 
-        {/* Botón para limpiar filtros rápidos */}
+        {/* Botón para limpiar filtros */}
         {(fechaInicio || fechaFin || filtroEstado !== 'Todos') && (
           <button 
             onClick={() => { setFechaInicio(''); setFechaFin(''); setFiltroEstado('Todos'); }}
@@ -186,13 +232,14 @@ export default function CierreCaja() {
               </tr>
             ) : (
               cierresFiltrados.map((c) => {
+                const dif = c.diferenciaCalculada;
                 let badgeEstilo = "bg-emerald-500/10 text-emerald-400";
                 let textoEstado = "Cuadrado";
 
-                if (c.diferencia < 0) {
+                if (dif < -0.01) {
                   badgeEstilo = "bg-rose-500/10 text-rose-400";
                   textoEstado = "Faltante";
-                } else if (c.diferencia > 0) {
+                } else if (dif > 0.01) {
                   badgeEstilo = "bg-amber-500/10 text-amber-400";
                   textoEstado = "Sobrante";
                 }
@@ -208,8 +255,8 @@ export default function CierreCaja() {
                     <td className="p-4 text-right text-rose-500">
                       S/ {Number(c.egresos_sistema || 0).toFixed(2)}
                     </td>
-                    <td className={`p-4 text-right font-bold ${c.diferencia === 0 ? 'opacity-40' : c.diferencia < 0 ? 'text-rose-500' : 'text-amber-500'}`}>
-                      S/ {Number(c.diferencia || 0).toFixed(2)}
+                    <td className={`p-4 text-right font-bold ${Math.abs(dif) <= 0.01 ? 'opacity-40' : dif < 0 ? 'text-rose-500' : 'text-amber-500'}`}>
+                      S/ {Number(dif || 0).toFixed(2)}
                     </td>
                     <td className="p-4 text-center">
                       <span className={`px-2.5 py-1 text-[10px] uppercase font-bold rounded-sm tracking-wider ${badgeEstilo}`}>
@@ -233,7 +280,7 @@ export default function CierreCaja() {
         </table>
       </div>
 
-      {/* MODAL / DETALLE DE "VER MÁS" */}
+      {/* MODAL DETALLE DE "VER MÁS" */}
       {cierreSeleccionado && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-[#111111] border border-gray-200 dark:border-gray-800 w-full max-w-lg shadow-2xl rounded-sm overflow-hidden animate-in zoom-in-95 duration-200">
@@ -254,25 +301,20 @@ export default function CierreCaja() {
             {/* Cuerpo de la Información */}
             <div className="p-6 space-y-5">
               
-              {/* Tiempos de Duración */}
+              {/* Tiempos de Cierre */}
               <div className="grid grid-cols-2 gap-4 border-b border-gray-100 dark:border-gray-800 pb-4">
-                <div>
-                  <span className="block text-[10px] uppercase tracking-wider text-gray-400 font-medium">Fecha Apertura</span>
-                  <span className="text-xs font-light">{formatFecha(cierreSeleccionado.fecha_apertura)}</span>
-                </div>
                 <div>
                   <span className="block text-[10px] uppercase tracking-wider text-gray-400 font-medium">Fecha Cierre</span>
                   <span className="text-xs font-light">{formatFecha(cierreSeleccionado.fecha_cierre)}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] uppercase tracking-wider text-gray-400 font-medium">Base Inicial</span>
+                  <span className="text-xs font-semibold text-blue-400">S/ {Number(cierreSeleccionado.base_inicial || 0).toFixed(2)}</span>
                 </div>
               </div>
 
               {/* Bloque Financiero Desglosado */}
               <div className="space-y-3">
-                <div className="flex justify-between items-center text-xs border-b border-gray-100 dark:border-gray-800/60 pb-2">
-                  <span className="opacity-60 font-medium uppercase tracking-wide">Base Inicial en Caja:</span>
-                  <span className="font-semibold">S/ {Number(cierreSeleccionado.base_inicial || 0).toFixed(2)}</span>
-                </div>
-
                 <div className="bg-gray-50 dark:bg-[#161616] p-3 space-y-2 rounded-sm border border-gray-100 dark:border-gray-800/80">
                   <span className="block text-[10px] uppercase tracking-widest font-bold opacity-40 mb-1 text-[#D4AF37]">Conteo de Dinero Físico</span>
                   
@@ -295,7 +337,7 @@ export default function CierreCaja() {
                 </div>
               </div>
 
-              {/* Totalizadores finales en el Modal */}
+              {/* Totalizadores finales */}
               <div className="pt-2 grid grid-cols-2 gap-4 text-center">
                 <div className="p-2 bg-emerald-500/5 border border-emerald-500/10 rounded-sm">
                   <span className="block text-[9px] uppercase tracking-wider text-emerald-400 font-bold">Total Sistema</span>
@@ -303,8 +345,8 @@ export default function CierreCaja() {
                 </div>
                 <div className="p-2 bg-black/10 dark:bg-white/5 border border-gray-200 dark:border-gray-800 rounded-sm">
                   <span className="block text-[9px] uppercase tracking-wider text-gray-400 font-bold">Diferencia Final</span>
-                  <span className={`text-sm font-bold ${cierreSeleccionado.diferencia === 0 ? 'text-gray-400' : cierreSeleccionado.diferencia < 0 ? 'text-rose-500' : 'text-amber-500'}`}>
-                    S/ {Number(cierreSeleccionado.diferencia || 0).toFixed(2)}
+                  <span className={`text-sm font-bold ${Math.abs(cierreSeleccionado.diferenciaCalculada) <= 0.01 ? 'text-gray-400' : cierreSeleccionado.diferenciaCalculada < 0 ? 'text-rose-500' : 'text-amber-500'}`}>
+                    S/ {Number(cierreSeleccionado.diferenciaCalculada || 0).toFixed(2)}
                   </span>
                 </div>
               </div>

@@ -21,9 +21,7 @@ const Ingresos = () => {
     goldBorder: 'border-[#D4AF37]',
   };
 
-  // ==========================================
-  // 1. ESTADOS PARA DATOS Y FILTROS (ACTUALIZADO)
-  // ==========================================
+
   const [ingresos, setIngresos] = useState([]);
   const [loading, setLoading] = useState(true);
   // Ahora el filtro de fecha inicia con el día de hoy por defecto (YYYY-MM-DD)
@@ -112,38 +110,40 @@ if (filtroFecha) {
     fetchIngresos();
   }, [filtroFecha]);
 
-  // ==========================================
-  // LÓGICA DEL FORMULARIO: INGRESO EXTRA Y EDICIÓN
-  // ==========================================
-  const handleSaveIngresoExtra = async (e) => {
-    e.preventDefault();
-    if (!nuevoMonto || parseFloat(nuevoMonto) <= 0) return;
+ const handleSaveIngresoExtra = async (e) => {
+  e.preventDefault();
+  if (!nuevoMonto || parseFloat(nuevoMonto) <= 0) return;
 
-    try {
-      const { error } = await supabase
-        .from('pago')
-        .insert([
-          {
-            monto: parseFloat(nuevoMonto),
-            tipo: nuevoMetodo,
-            descripcion: nuevaDesc || 'Ingreso Extra',
-            codigo_venta: null,
-            fecha: new Date().toISOString()
-          }
-        ]);
+  try {
+    // Generar la fecha local exacta (YYYY-MM-DDTHH:mm:ss)
+    const hoy = new Date();
+    const offset = hoy.getTimezoneOffset() * 60000;
+    const fechaLocalISO = new Date(hoy.getTime() - offset).toISOString();
 
-      if (error) throw error;
+    const { error } = await supabase
+      .from('pago')
+      .insert([
+        {
+          monto: parseFloat(nuevoMonto),
+          tipo: nuevoMetodo,
+          descripcion: nuevaDesc || 'Ingreso Extra',
+          codigo_venta: null,
+          fecha: fechaLocalISO // Usamos la fecha local corregida
+        }
+      ]);
 
-      setNuevoMonto('');
-      setNuevaDesc('');
-      setNuevoMetodo('Efectivo');
-      setIsModalOpen(false);
-      fetchIngresos(); 
-    } catch (error) {
-      console.error('Error al guardar ingreso extra:', error.message);
-      alert('No se pudo registrar el ingreso extra');
-    }
-  };
+    if (error) throw error;
+
+    setNuevoMonto('');
+    setNuevaDesc('');
+    setNuevoMetodo('Efectivo');
+    setIsModalOpen(false);
+    fetchIngresos(); 
+  } catch (error) {
+    console.error('Error al guardar ingreso extra:', error.message);
+    alert('No se pudo registrar el ingreso extra');
+  }
+};
 
   const handleAbirEdicion = (ingreso) => {
     setEditId(ingreso.id);
@@ -183,9 +183,6 @@ if (filtroFecha) {
     }
   };
 
-  // ==========================================
-  // FILTROS LOCALES (TIPO Y MÉTODO)
-  // ==========================================
 const limpiarFiltros = () => {
   setFiltroFecha(obtenerFechaHoyPeru());
   setFiltroTipo('Todos');
@@ -214,9 +211,6 @@ const limpiarFiltros = () => {
     return cumpleTipo && cumpleMetodo;
   });
 
-  // ==========================================
-  // CÁLCULO DE LAS TARJETAS (RESUMEN)
-  // ==========================================
   const totales = ingresosFiltrados.reduce((acc, item) => {
     const montoNum = Number(item.monto || 0);
     acc.total += montoNum;
@@ -521,11 +515,7 @@ const limpiarFiltros = () => {
                 >
                   Guardar Ingreso
                 </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+              </div>  </form>  </div> </div> )}
 
       {/* MODAL EDICIÓN */}
       {isEditModalOpen && (
@@ -606,11 +596,7 @@ const limpiarFiltros = () => {
                 >
                   Actualizar Datos
                 </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+              </div> </form> </div> </div> )}
 
       {/* MODAL DETALLE ESPECÍFICO DEL INGRESO */}
       {isDetailModalOpen && selectedIngreso && (
@@ -647,8 +633,7 @@ const limpiarFiltros = () => {
                   <p className="text-sm font-light font-mono mt-0.5 text-[#D4AF37]">
                     {selectedIngreso.codigo_venta || 'N/A'}
                   </p>
-                </div>
-              </div>
+                </div> </div>
 
               <div className="border-t border-b border-gray-100 dark:border-gray-800 py-3 my-2 space-y-2">
                 <span className="block text-[10px] uppercase tracking-widest opacity-50 mb-1">Desglose Específico</span>
@@ -672,9 +657,7 @@ const limpiarFiltros = () => {
                       </span>
                       <span className="font-medium">S/ {selectedIngreso.desgloseProductos.toFixed(2)}</span>
                     </div>
-                  </>
-                )}
-              </div>
+                  </> )} </div>
 
               <div className="flex justify-between items-center pt-2">
                 <div>
@@ -684,9 +667,7 @@ const limpiarFiltros = () => {
                 <div className="text-right">
                   <span className="block text-[10px] uppercase tracking-widest opacity-50">Monto Total Cobrado</span>
                   <p className={`text-xl font-bold ${theme.gold}`}>S/ {Number(selectedIngreso.monto).toFixed(2)}</p>
-                </div>
-              </div>
-            </div>
+                </div> </div> </div>
 
             <div className="mt-6">
               <button 
@@ -695,13 +676,6 @@ const limpiarFiltros = () => {
               >
                 Cerrar Detalle
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-    </div>
-  );
-};
+            </div>  </div> </div> )} </div> );};
 
 export default Ingresos;

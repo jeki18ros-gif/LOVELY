@@ -3,6 +3,7 @@ import CitasHeader from '../componentes/citas/header';
 import Agenda from '../componentes/citas/agenda';
 import DetalleCita from '../componentes/citas/detallecita';
 import FormularioCita from '../componentes/citas/formulario/formularioCita';
+import { supabase } from '../lib/supabase'; // Asegúrate de importar supabase
 
 const Citas = () => {
   const [openDetalle, setOpenDetalle] = useState(false);
@@ -19,30 +20,33 @@ const Citas = () => {
     setOpenDetalle(false);
   };
 
-const handleSaveCita = (nuevaCita) => {
-  console.log("Cita registrada:", nuevaCita);
-
-  setRefreshKey(prev => prev + 1);
-
-  setIsFormOpen(false);
-};
+  const handleSaveCita = (nuevaCita) => {
+    console.log("Cita registrada:", nuevaCita);
+    setRefreshKey(prev => prev + 1);
+    setIsFormOpen(false);
+  };
 
   const actualizarDatosTabla = (citaActualizada) => {
     setCitaSeleccionada(citaActualizada);
     setRefreshKey(prev => prev + 1);
   };
 
-const eliminarCita = async (id) => {
-  try {
+  const eliminarCita = async (id) => {
+    try {
+      const { error } = await supabase
+        .from('citas')
+        .delete()
+        .eq('id', id);
 
-    setOpenDetalle(false);
+      if (error) throw error;
 
-    setRefreshKey(prev => prev + 1);
+      setOpenDetalle(false);
+      setRefreshKey(prev => prev + 1);
+    } catch (error) {
+      console.error("Error al eliminar cita:", error);
+    }
+  };
 
-  } catch (error) {
-    console.error(error);
-  }
-};
   return (
     <div className="min-h-screen p-6 bg-gray-50 dark:bg-[#0a0a0a] text-gray-800 dark:text-white transition-colors duration-300">
       <div className="max-w-[1400px] mx-auto flex gap-6 items-stretch">

@@ -9,17 +9,16 @@ const estadoStyles = {
   Cancelada: 'bg-red-500/20 text-red-600 border-red-500/30'
 };
 
-const FormularioCita = ({ isOpen, onClose }) => {
+const FormularioCita = ({ isOpen, onClose, onSubmit }) => {
   const {
     formData, setFormData,
     busquedaCliente, setBusquedaCliente,
     busquedaServicio, setBusquedaServicio,
     clientesFiltrados, serviciosFiltrados,
-    clienteSeleccionado, servicioSeleccionado,
     horasOcupadas, mensaje,
     seleccionarCliente, seleccionarServicio,
     calcularHoraFin, guardarCita
-  } = useFormularioCita(isOpen, onClose);
+  } = useFormularioCita(isOpen, onClose, onSubmit);
 
   if (!isOpen) return null;
 

@@ -1,111 +1,80 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from "../../../lib/supabase";
 
 export const useDetalleCita = (cita, onUpdate) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState({});
+  const [editData, setEditData] = useState(cita || {});
+  const [prevCita, setPrevCita] = useState(cita);
   const [mensaje, setMensaje] = useState('');
 
-  // Sincronizar datos cuando cambia la cita seleccionada
-  useEffect(() => {
-    if (cita) {
-      setEditData(cita);
-      setIsEditing(false);
-    }
-  }, [cita]);
+  // Sincronizar datos durante el render cuando cambia la cita seleccionada
+  if (cita !== prevCita) {
+    setPrevCita(cita);
+    setEditData(cita || {});
+    setIsEditing(false);
+  }
 
-const handleChange = (e) => {
+  const handleChange = (e) => {
+    const { name, value } = e.target;
 
-  const { name, value } = e.target;
-
-  if (name === "start") {
-
-    const fechaOriginal =
-      new Date(editData.start)
+    if (name === "start") {
+      const fechaOriginal = new Date(editData.start)
         .toISOString()
         .split('T')[0];
 
+      setEditData(prev => ({
+        ...prev,
+        start: `${fechaOriginal}T${value}:00`
+      }));
+
+      return;
+    }
+
     setEditData(prev => ({
-
       ...prev,
-
-      start:
-        `${fechaOriginal}T${value}:00`
+      [name]: value
     }));
-
-    return;
-  }
-
-  setEditData(prev => ({
-    ...prev,
-    [name]: value
-  }));
-};
+  };
 
   const mostrarMensaje = (texto) => {
     setMensaje(texto);
     setTimeout(() => setMensaje(''), 3000);
   };
 
-const handleSave = async () => {
+  const handleSave = async () => {
+    if (!cita?.id) return;
 
-  const horaInicio =
-    new Date(editData.start)
-      .toLocaleTimeString(
-        'es-PE',
-        {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false
-        }
-      );
+    const horaInicio = new Date(editData.start)
+      .toLocaleTimeString('es-PE', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
 
-  const { error } = await supabase
-    .from("citas")
-    .update({
+    const { error } = await supabase
+      .from("citas")
+      .update({
+        estado: editData.status,
+        notas: editData.notes,
+        precio: Number(editData.price),
+        duracion_minutos: Number(editData.duration),
+        hora_inicio: horaInicio,
+      })
+      .eq("id", cita.id);
 
-      estado:
-        editData.status,
+    if (error) {
+      console.error(error);
+      mostrarMensaje("Error al actualizar cita");
+      return;
+    }
 
-      notas:
-        editData.notes,
-
-      precio:
-        Number(editData.price),
-
-      duracion_minutos:
-        Number(editData.duration),
-
-      hora_inicio:
-        horaInicio,
-
-    })
-    .eq("id", cita.id);
-
-  if (error) {
-
-    console.error(error);
-
-    mostrarMensaje(
-      "Error al actualizar cita"
-    );
-
-    return;
-  }
-
-  onUpdate({
-    ...editData
-  });
-
-  mostrarMensaje(
-    "Cita actualizada correctamente"
-  );
-
-  setIsEditing(false);
-};
+    onUpdate({ ...editData });
+    mostrarMensaje("Cita actualizada correctamente");
+    setIsEditing(false);
+  };
 
   const cancelarEdicion = () => {
-    setEditData(cita);
+    setEditData(cita || {});
     setIsEditing(false);
   };
 
@@ -123,7 +92,6 @@ const handleSave = async () => {
 // Helper de formato fuera del hook
 export const formatTime = (isoString) => {
   if (!isoString) return "";
-  if (!isoString) return isoString;
   const date = new Date(isoString);
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 };

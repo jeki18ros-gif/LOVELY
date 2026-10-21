@@ -8,46 +8,48 @@ export default function FormularioVer({ isOpen, onClose, cliente }) {
   const [seguimientos, setSeguimientos] = useState([]);
   const data = detalleCliente || cliente;
 
+
   useEffect(() => {
-    if (cliente && isOpen) {
-      obtenerDetalleCliente();
-      obtenerSeguimiento();
-    }
-  }, [cliente, isOpen]);
+    if (!cliente?.id || !isOpen) return;
+
+    const obtenerDetalleCliente = async () => {
+      const { data, error } = await supabase
+        .from("clientes")
+        .select("*")
+        .eq("id", cliente.id)
+        .single();
+
+      if (error) {
+        console.error("Error al obtener el detalle del cliente:", error);
+        return;
+      }
+
+      setDetalleCliente(data);
+    };
+
+    const obtenerSeguimiento = async () => {
+      const { data, error } = await supabase
+        .from("seguimiento")
+        .select("*")
+        .eq("id_cliente", cliente.id)
+        .eq("tipo", "cliente")
+        .order("fecha", { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error("Error al obtener el seguimiento:", error);
+        return;
+      }
+
+      setSeguimientos(data || []);
+    };
+
+    obtenerDetalleCliente();
+    obtenerSeguimiento();
+  }, [cliente?.id, isOpen]);
 
   if (!isOpen || !data) return null;
-const obtenerDetalleCliente = async () => {
 
-  const { data, error } = await supabase
-    .from('clientes')
-    .select('*')
-    .eq('id', cliente.id)
-    .single();
-
-  if (error) {
-    console.error(error);
-    return;
-  }
-
-  setDetalleCliente(data);
-};
-
-const obtenerSeguimiento = async () => {
-
-  const { data, error } = await supabase
-    .from('seguimiento')
-    .select('*')
-    .eq('id_cliente', cliente.id)
-    .eq('tipo', 'cliente')
-    .order('fecha', { ascending: false })
-    .limit(1);
-  if (error) {
-    console.error(error);
-    return;
-  }
-
-  setSeguimientos(data || []);
-};
   const tipoStyles = {
     Nuevo: "text-blue-500 bg-blue-500/10 border-blue-500/20",
     Regular: "text-green-500 bg-green-500/10 border-green-500/20",

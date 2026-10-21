@@ -9,16 +9,16 @@ import FormularioCliente from '../componentes/clientes/formularios/formulariocli
 import FormularioVer from '../componentes/clientes/formularios/formularioVer';
 import FormularioEditar from '../componentes/clientes/formularios/formularioEditar';
 
+const capitalizar = (texto) => {
+  if (!texto) return 'Nuevo';
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+};
+
 const Clientes = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-
   const [listaClientes, setListaClientes] = useState([]);
-
-  const [clienteSeleccionado, setClienteSeleccionado] =
-    useState(null);
-
-  const [modalType, setModalType] =
-    useState(null);
+  const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
+  const [modalType, setModalType] = useState(null);
 
   const [filters, setFilters] = useState({
     search: '',
@@ -26,41 +26,44 @@ const Clientes = () => {
     visitas: ''
   });
 
-  useEffect(() => {
-    obtenerClientes();
-  }, []);
+  // Función independiente para recargas manuales (después de guardar, editar o borrar)
+  const cargarClientesDB = async () => {
+    const { data, error } = await supabase
+      .from('clientes')
+      .select(`
+        id,
+        nombre,
+        numero,
+        correo,
+        frecuencia,
+        visitas,
+        fecha_registro
+      `);
 
-  useEffect(() => {
-    const channel = supabase
-      .channel('clientes-db-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'clientes'
-        },
-        () => obtenerClientes()
-      )
-      .subscribe();
+    if (error) {
+      console.error("Error al obtener clientes:", error);
+      return;
+    }
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const capitalizar = (texto) => {
-    if (!texto) return 'Nuevo';
-
-    return (
-      texto.charAt(0).toUpperCase() +
-      texto.slice(1)
+    setListaClientes(
+      (data || []).map(c => ({
+        id: c.id,
+        nombre: c.nombre,
+        telefono: c.numero || '—',
+        correo: c.correo || '—',
+        frecuencia: capitalizar(c.frecuencia),
+        visitas: c.visitas,
+        fecha_registro: c.fecha_registro
+      }))
     );
   };
 
-  const obtenerClientes = async () => {
-    const { data, error } =
-      await supabase
+  // Carga inicial y suscripción Realtime encapsulada en el efecto
+  useEffect(() => {
+    let isMounted = true;
+
+    const obtenerClientesInicial = async () => {
+      const { data, error } = await supabase
         .from('clientes')
         .select(`
           id,
@@ -72,337 +75,224 @@ const Clientes = () => {
           fecha_registro
         `);
 
+      if (error) {
+        console.error("Error al obtener clientes:", error);
+        return;
+      }
+
+      if (isMounted) {
+        setListaClientes(
+          (data || []).map(c => ({
+            id: c.id,
+            nombre: c.nombre,
+            telefono: c.numero || '—',
+            correo: c.correo || '—',
+            frecuencia: capitalizar(c.frecuencia),
+            visitas: c.visitas,
+            fecha_registro: c.fecha_registro
+          }))
+        );
+      }
+    };
+
+    obtenerClientesInicial();
+
+    const channel = supabase
+      .channel('clientes-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'clientes'
+        },
+        () => {
+          if (isMounted) obtenerClientesInicial();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const actualizarCliente = async (id, form) => {
+    const { nombre, numero, correo, seguimiento } = form;
+
+    const { error } = await supabase
+      .from('clientes')
+      .update({
+        nombre,
+        numero: numero?.trim() || null,
+        correo: correo?.trim() || null
+      })
+      .eq('id', id);
+
     if (error) {
-      console.error(error);
+      console.error("Error actualizando cliente:", error);
       return;
     }
 
-    setListaClientes(
-      data.map(c => ({
-        id: c.id,
-        nombre: c.nombre,
-        telefono: c.numero || '—',
-        correo: c.correo || '—',
-        frecuencia: capitalizar(
-          c.frecuencia
-        ),
-        visitas: c.visitas,
-        fecha_registro:
-          c.fecha_registro
-      }))
-    );
-  };
+    if (seguimiento && seguimiento.trim()) {
+      const { data: seguimientoExistente } = await supabase
+        .from('seguimiento')
+        .select('id')
+        .eq('id_cliente', id)
+        .eq('tipo', 'cliente')
+        .maybeSingle();
 
-  const actualizarCliente =
-    async (id, form) => {
-
-      const {
-        nombre,
-        numero,
-        correo,
-        seguimiento
-      } = form;
-
-      const { error } =
+      if (seguimientoExistente) {
         await supabase
-          .from('clientes')
+          .from('seguimiento')
           .update({
-            nombre,
-            numero:
-              numero?.trim() ||
-              null,
-            correo:
-              correo?.trim() ||
-              null
+            nota: seguimiento,
+            fecha: new Date().toISOString()
           })
-          .eq('id', id);
-
-      if (error) {
-        console.error(error);
-        return;
-      }
-
-      if (
-        seguimiento &&
-        seguimiento.trim()
-      ) {
-
-        const {
-          data:
-            seguimientoExistente
-        } =
-          await supabase
-            .from(
-              'seguimiento'
-            )
-            .select('id')
-            .eq(
-              'id_cliente',
-              id
-            )
-            .eq(
-              'tipo',
-              'cliente'
-            )
-            .maybeSingle();
-
-        if (
-          seguimientoExistente
-        ) {
-          await supabase
-            .from(
-              'seguimiento'
-            )
-            .update({
-              nota:
-                seguimiento,
-              fecha:
-                new Date().toISOString()
-            })
-            .eq(
-              'id',
-              seguimientoExistente.id
-            );
-        } else {
-          await supabase
-            .from(
-              'seguimiento'
-            )
-            .insert([
-              {
-                id_cliente:
-                  id,
-                nota:
-                  seguimiento,
-                tipo:
-                  'cliente',
-                fecha:
-                  new Date().toISOString()
-              }
-            ]);
-        }
-      }
-
-      await obtenerClientes();
-
-      setModalType(null);
-      setClienteSeleccionado(
-        null
-      );
-    };
-
-  const handleSaveCliente =
-    async (form) => {
-
-      const {
-        nombre,
-        numero,
-        correo
-      } = form;
-
-      const { error } =
+          .eq('id', seguimientoExistente.id);
+      } else {
         await supabase
-          .from('clientes')
+          .from('seguimiento')
           .insert([
             {
-              nombre,
-              numero:
-                numero ||
-                null,
-              correo:
-                correo ||
-                null,
-              visitas: 0,
-              frecuencia:
-                'nuevo'
+              id_cliente: id,
+              nota: seguimiento,
+              tipo: 'cliente',
+              fecha: new Date().toISOString()
             }
           ]);
-
-      if (error) {
-        console.error(error);
-        return;
       }
+    }
 
-      await obtenerClientes();
+    await cargarClientesDB();
+    setModalType(null);
+    setClienteSeleccionado(null);
+  };
 
-      setIsModalOpen(
-        false
-      );
-    };
+  const handleSaveCliente = async (form) => {
+    const { nombre, numero, correo } = form;
 
-  const cerrarModal =
-    () => {
-      setModalType(null);
-      setClienteSeleccionado(
-        null
-      );
-    };
+    const { error } = await supabase
+      .from('clientes')
+      .insert([
+        {
+          nombre,
+          numero: numero || null,
+          correo: correo || null,
+          visitas: 0,
+          frecuencia: 'nuevo'
+        }
+      ]);
+
+    if (error) {
+      console.error("Error guardando cliente:", error);
+      return;
+    }
+
+    await cargarClientesDB();
+    setIsModalOpen(false);
+  };
+
+  const cerrarModal = () => {
+    setModalType(null);
+    setClienteSeleccionado(null);
+  };
 
   return (
-    <div className="
-min-h-screen
-bg-gradient-to-br
-from-[#fffdf7]
-via-[#f8f5ed]
-to-[#f2ede3]
-dark:from-[#050505]
-dark:via-[#0b0b0b]
-dark:to-[#111111]
-">
-
-      <div className="
-max-w-7xl
-mx-auto
-p-4
-md:p-8
-space-y-6
-">
-
+    <div className="min-h-screen bg-gradient-to-br from-[#fffdf7] via-[#f8f5ed] to-[#f2ede3] dark:from-[#050505] dark:via-[#0b0b0b] dark:to-[#111111]">
+      <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
         <ClientesHeader
-          onOpenModal={() =>
-            setIsModalOpen(
-              true
-            )
-          }
+          onOpenModal={() => setIsModalOpen(true)}
         />
 
-        <section className="
-bg-white/80
-dark:bg-[#101010]/90
-backdrop-blur-xl
-p-5
-rounded-3xl
-border
-border-amber-500/20
-">
-
+        <section className="bg-white/80 dark:bg-[#101010]/90 backdrop-blur-xl p-5 rounded-3xl border border-amber-500/20">
           <FilterBar
-            filters={
-              filters
-            }
-            setFilters={
-              setFilters
-            }
+            filters={filters}
+            setFilters={setFilters}
           />
-
         </section>
 
-        <main className="
-bg-white/90
-dark:bg-[#0d0d0d]
-backdrop-blur-xl
-rounded-[30px]
-border
-border-amber-500/20
-shadow-[0_10px_40px_rgba(251,191,36,0.08)]
-overflow-hidden
-">
-
-<ClientesTable
-  filters={filters}
-  listaClientes={listaClientes}
-  setListaClientes={setListaClientes}
-  actualizarCliente={actualizarCliente}
-
-  abrirModal={(tipo, cliente) => {
-    setClienteSeleccionado(cliente);
-    setModalType(tipo);
-  }}
-/>
-
+        <main className="bg-white/90 dark:bg-[#0d0d0d] backdrop-blur-xl rounded-[30px] border border-amber-500/20 shadow-[0_10px_40px_rgba(251,191,36,0.08)] overflow-hidden">
+          <ClientesTable
+            filters={filters}
+            listaClientes={listaClientes}
+            setListaClientes={setListaClientes}
+            actualizarCliente={actualizarCliente}
+            abrirModal={(tipo, cliente) => {
+              setClienteSeleccionado(cliente);
+              setModalType(tipo);
+            }}
+          />
         </main>
       </div>
+
       <FormularioCliente
-        isOpen={
-          isModalOpen}
-        onClose={() => setIsModalOpen( false)}
-        onSubmit={ handleSaveCliente }
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleSaveCliente}
       />
+
       <FormularioVer
-        isOpen={
-          modalType ===
-          'ver'
-        }
-
-        cliente={
-          clienteSeleccionado
-        }
-
-        onClose={
-          cerrarModal
-        }
+        isOpen={modalType === 'ver'}
+        cliente={clienteSeleccionado}
+        onClose={cerrarModal}
       />
 
       <FormularioEditar
-        isOpen={
-          modalType ===
-          'editar'
-        }
-
-        cliente={
-          clienteSeleccionado
-        }
-
-        onClose={
-          cerrarModal
-        }
-
-        onSubmit={
-          (form) =>
-            actualizarCliente(
-              clienteSeleccionado.id,
-              form
-            )
+        isOpen={modalType === 'editar'}
+        cliente={clienteSeleccionado}
+        onClose={cerrarModal}
+        onSubmit={(form) =>
+          actualizarCliente(clienteSeleccionado.id, form)
         }
       />
-{modalType === 'borrar' && (
-  <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
 
-    <div className="bg-white dark:bg-[#0f0f0f] w-full max-w-sm rounded-3xl p-6 border border-red-500/20 shadow-2xl">
+      {modalType === 'borrar' && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-[#0f0f0f] w-full max-w-sm rounded-3xl p-6 border border-red-500/20 shadow-2xl">
+            <h3 className="text-xl font-bold mb-3 text-black dark:text-white">
+              ¿Eliminar cliente?
+            </h3>
 
-      <h3 className="text-xl font-bold mb-3 text-black dark:text-white">
-        ¿Eliminar cliente?
-      </h3>
+            <p className="text-sm text-gray-500 mb-6">
+              ¿Seguro que deseas eliminar a{" "}
+              <span className="font-bold text-red-500">
+                {clienteSeleccionado?.nombre}
+              </span>?
+            </p>
 
-      <p className="text-sm text-gray-500 mb-6">
-        ¿Seguro que deseas eliminar a{" "}
-        <span className="font-bold text-red-500">
-          {clienteSeleccionado?.nombre}
-        </span>?
-      </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={cerrarModal}
+                className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-zinc-800"
+              >
+                Cancelar
+              </button>
 
-      <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={async () => {
+                  const { error } = await supabase
+                    .from('clientes')
+                    .delete()
+                    .eq('id', clienteSeleccionado.id);
 
-        <button
-          onClick={cerrarModal}
-          className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-zinc-800"
-        >
-          Cancelar
-        </button>
+                  if (!error) {
+                    await cargarClientesDB();
+                  }
 
-        <button
-          onClick={async () => {
-
-            const { error } = await supabase
-              .from('clientes')
-              .delete()
-              .eq('id', clienteSeleccionado.id);
-
-            if (!error) {
-              obtenerClientes();
-            }
-
-            cerrarModal();
-          }}
-          className="flex-1 py-3 rounded-xl bg-red-600 text-white"
-        >
-          Eliminar
-        </button>
-
-      </div>
-    </div>
-  </div>
-)}
+                  cerrarModal();
+                }}
+                className="flex-1 py-3 rounded-xl bg-red-600 text-white"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
