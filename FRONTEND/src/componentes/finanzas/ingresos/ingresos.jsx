@@ -13,12 +13,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase'; 
-
-const obtenerFechaHoyPeru = () => {
-  const hoy = new Date();
-  hoy.setMinutes(hoy.getMinutes() - hoy.getTimezoneOffset());
-  return hoy.toISOString().split('T')[0];
-};
+import { obtenerFechaHoyLocal, obtenerFechaLocalISO, obtenerRangoDelDia } from '../../../utils/fechas';
 
 const Ingresos = () => {
   const theme = {
@@ -30,7 +25,7 @@ const Ingresos = () => {
   const [ingresos, setIngresos] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  const [filtroFecha, setFiltroFecha] = useState(obtenerFechaHoyPeru());
+  const [filtroFecha, setFiltroFecha] = useState(obtenerFechaHoyLocal());
   const [filtroTipo, setFiltroTipo] = useState('Todos');
   const [filtroMetodo, setFiltroMetodo] = useState('Todos');
 
@@ -77,12 +72,10 @@ const Ingresos = () => {
         `);
 
       if (filtroFecha) {
-        const inicioLocal = new Date(`${filtroFecha}T00:00:00`);
-        const finLocal = new Date(`${filtroFecha}T23:59:59`);
-
+        const rango = obtenerRangoDelDia(filtroFecha);
         query = query
-          .gte('fecha', inicioLocal.toISOString())
-          .lte('fecha', finLocal.toISOString());
+          .gte('fecha', rango.inicio)
+          .lte('fecha', rango.fin);
       }
 
       const { data, error } = await query;
@@ -123,12 +116,10 @@ const Ingresos = () => {
           `);
 
         if (filtroFecha) {
-          const inicioLocal = new Date(`${filtroFecha}T00:00:00`);
-          const finLocal = new Date(`${filtroFecha}T23:59:59`);
-
+          const rango = obtenerRangoDelDia(filtroFecha);
           query = query
-            .gte('fecha', inicioLocal.toISOString())
-            .lte('fecha', finLocal.toISOString());
+            .gte('fecha', rango.inicio)
+            .lte('fecha', rango.fin);
         }
 
         const { data, error } = await query;
@@ -158,9 +149,7 @@ const Ingresos = () => {
     if (!nuevoMonto || parseFloat(nuevoMonto) <= 0) return;
 
     try {
-      const hoy = new Date();
-      const offset = hoy.getTimezoneOffset() * 60000;
-      const fechaLocalISO = new Date(hoy.getTime() - offset).toISOString();
+      const fechaLocalISO = obtenerFechaLocalISO();
 
       const { error } = await supabase
         .from('pago')
@@ -226,7 +215,7 @@ const Ingresos = () => {
   };
 
   const limpiarFiltros = () => {
-    setFiltroFecha(obtenerFechaHoyPeru());
+    setFiltroFecha(obtenerFechaHoyLocal());
     setFiltroTipo('Todos');
     setFiltroMetodo('Todos');
   };

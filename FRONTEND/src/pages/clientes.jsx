@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { obtenerFechaLocalISO } from '../utils/fechas';
 
 import ClientesHeader from '../componentes/clientes/header';
 import FilterBar from '../componentes/clientes/filtros';
@@ -148,7 +149,7 @@ const Clientes = () => {
           .from('seguimiento')
           .update({
             nota: seguimiento,
-            fecha: new Date().toISOString()
+            fecha: obtenerFechaLocalISO()
           })
           .eq('id', seguimientoExistente.id);
       } else {
@@ -159,7 +160,7 @@ const Clientes = () => {
               id_cliente: id,
               nota: seguimiento,
               tipo: 'cliente',
-              fecha: new Date().toISOString()
+              fecha: obtenerFechaLocalISO()
             }
           ]);
       }

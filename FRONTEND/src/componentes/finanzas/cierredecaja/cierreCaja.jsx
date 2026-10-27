@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase'; 
+import { obtenerFechaHoyLocal, obtenerRangoDelDia } from '../../../utils/fechas';
 
 // Subcomponentes
 import Notificacion from './include/Notificacion';
@@ -10,12 +11,6 @@ import DictamenCuadre from './include/DictamenCuadre';
 import EstadoCajaCerrada from './include/EstadoCajaCerrada';
 import SeccionExtras from './include/SeccionExtras';
 import { calcularArqueo, calcularEsperadoCanal } from './cuadreCaja';
-
-const obtenerFechaHoyLocal = () => {
-  const hoy = new Date();
-  const offset = hoy.getTimezoneOffset() * 60000;
-  return new Date(hoy.getTime() - offset).toISOString().split('T')[0];
-};
 
 const CierreCaja = () => {
   const [fechaSeleccionada, setFechaSeleccionada] = useState(obtenerFechaHoyLocal());
@@ -52,16 +47,24 @@ const CierreCaja = () => {
     const cargarDatos = async () => {
       setLoading(true);
       try {
-        // Consultar rango amplio para evitar desfases UTC
+        // Obtener el rango completo del día seleccionado
+        const rango = obtenerRangoDelDia(fechaSeleccionada);
+
+        // Consultar pagos del día específico con filtro en la consulta SQL
         const { data: pagos, error: errorPagos } = await supabase
           .from('pago')
-          .select('monto, tipo, codigo_venta, fecha');
+          .select('monto, tipo, codigo_venta, fecha')
+          .gte('fecha', rango.inicio)
+          .lte('fecha', rango.fin);
 
         if (errorPagos) throw errorPagos;
 
+        // Consultar egresos del día específico con filtro en la consulta SQL
         const { data: egresosData, error: errorEgresos } = await supabase
           .from('egresos')
-          .select('monto, metodo_pago, fecha');
+          .select('monto, metodo_pago, fecha')
+          .gte('fecha', rango.inicio)
+          .lte('fecha', rango.fin);
 
         if (errorEgresos) throw errorEgresos;
 
@@ -70,12 +73,8 @@ const CierreCaja = () => {
         let sumaIngresosExtras = 0;
         let sumaEgresosTotal = 0;
 
-        // Filtrar localmente por la cadena YYYY-MM-DD seleccionada
-        const pagosDelDia = (pagos || []).filter(p => p.fecha && p.fecha.startsWith(fechaSeleccionada));
-        const egresosDelDia = (egresosData || []).filter(e => e.fecha && e.fecha.startsWith(fechaSeleccionada));
-
         // A. PROCESAR INGRESOS Y ASIGNAR A CANALES
-        pagosDelDia.forEach((pago) => {
+        (pagos || []).forEach((pago) => {
           const monto = Number(pago.monto || 0);
           const esExtra = !pago.codigo_venta;
 
@@ -95,7 +94,7 @@ const CierreCaja = () => {
         });
 
         // B. PROCESAR EGRESOS Y RESTAR DE CANALES
-        egresosDelDia.forEach((egreso) => {
+        (egresosData || []).forEach((egreso) => {
           const monto = Number(egreso.monto || 0);
           sumaEgresosTotal += monto;
 
@@ -111,9 +110,12 @@ const CierreCaja = () => {
         // C. VERIFICAR CIERRE EN HISTORIAL
         const { data: cierresData } = await supabase
           .from('cierre_caja')
-          .select('id, fecha_cierre, ingresos_sistema, egresos_sistema, base_inicial, efectivo_contado, yape_contado, plin_contado, tarjeta_contado');
+          .select('id, fecha_cierre, ingresos_sistema, egresos_sistema, base_inicial, efectivo_contado, yape_contado, plin_contado, tarjeta_contado')
+          .gte('fecha_cierre', rango.inicio)
+          .lte('fecha_cierre', rango.fin)
+          .order('fecha_cierre', { ascending: false });
 
-        const cierreExistente = (cierresData || []).find(c => c.fecha_cierre && c.fecha_cierre.startsWith(fechaSeleccionada));
+        const cierreExistente = cierresData?.[0] || null;
 
         if (isMounted) {
           const ingresoTotalCalculado = sumaIngresosVentas + sumaIngresosExtras;
@@ -174,19 +176,24 @@ const CierreCaja = () => {
   // GUARDAR / ACTUALIZAR CIERRE
   const handleCerrarCaja = async () => {
     try {
-      const fechaCierreLocal = `${fechaSeleccionada}T${new Date().toLocaleTimeString('es-PE', { hour12: false })}`;
+      // Obtener hora actual en formato HH:MM:SS
+      const ahora = new Date();
+      const horaLocal = ahora.toTimeString().split(' ')[0]; // Obtiene "HH:MM:SS"
+      const fechaCierreLocal = `${fechaSeleccionada}T${horaLocal}`;
 
+      // Buscar cierre existente del día usando rango
+      const rango = obtenerRangoDelDia(fechaSeleccionada);
       
-const { data: cierresData, error: errorCierres } = await supabase
-  .from('cierre_caja')
-  .select('id, fecha_cierre, ingresos_sistema, egresos_sistema')
-  .gte('fecha_cierre', `${fechaSeleccionada}T00:00:00`)
-  .lt('fecha_cierre', `${fechaSeleccionada}T23:59:59.999`)
-  .order('fecha_cierre', { ascending: false });
+      const { data: cierresData, error: errorCierres } = await supabase
+        .from('cierre_caja')
+        .select('id, fecha_cierre, ingresos_sistema, egresos_sistema')
+        .gte('fecha_cierre', rango.inicio)
+        .lte('fecha_cierre', rango.fin)
+        .order('fecha_cierre', { ascending: false });
 
-if (errorCierres) throw errorCierres;
+      if (errorCierres) throw errorCierres;
 
-const cierreExistente = cierresData?.[0] || null;
+      const cierreExistente = cierresData?.[0] || null;
 
       const payload = {
         fecha_cierre: fechaCierreLocal,

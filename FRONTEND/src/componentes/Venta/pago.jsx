@@ -3,6 +3,7 @@ import { pdf } from '@react-pdf/renderer';
 import { BoletaPDF } from './pdf/pdf';
 import { Wallet, Banknote, Smartphone, CreditCard, Layers, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { obtenerFechaLocalISO } from '../../utils/fechas';
 
 const METODOS = ['efectivo', 'yape', 'plin', 'tarjeta'];
 
@@ -102,7 +103,7 @@ const PaymentModule = ({
         .insert([
           {
             codigo_venta: codigoVenta,
-            fecha: new Date(),
+            fecha: obtenerFechaLocalISO(),
             monto_total: total,
             cliente_id,
             nombre_cliente

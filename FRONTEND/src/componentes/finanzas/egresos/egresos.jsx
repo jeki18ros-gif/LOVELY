@@ -10,13 +10,7 @@ import {
   Edit2
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase'; 
-
-// Función auxiliar pura colocada fuera del componente
-const getFechaActualLocal = () => {
-  const hoy = new Date();
-  const tzoffset = hoy.getTimezoneOffset() * 60000; 
-  return new Date(hoy.getTime() - tzoffset).toISOString().slice(0, 10);
-};
+import { obtenerFechaHoyLocal, obtenerFechaLocalISO, extraerFecha } from '../../../utils/fechas';
 
 const Egresos = () => {
   const theme = {
@@ -28,7 +22,7 @@ const Egresos = () => {
   // ESTADOS PARA DATOS Y FILTROS
   const [egresos, setEgresos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filtroFecha, setFiltroFecha] = useState(() => getFechaActualLocal());
+  const [filtroFecha, setFiltroFecha] = useState(() => obtenerFechaHoyLocal());
   const [filtroCategoria, setFiltroCategoria] = useState('Todos');
 
   // ESTADOS PARA EL MODAL DE NUEVO EGRESO
@@ -103,9 +97,7 @@ const Egresos = () => {
     if (!nuevoMonto || parseFloat(nuevoMonto) <= 0) return;
 
     try {
-      const hoy = new Date();
-      const offset = hoy.getTimezoneOffset() * 60000;
-      const fechaLocalISO = new Date(hoy.getTime() - offset).toISOString();
+      const fechaLocalISO = obtenerFechaLocalISO();
 
       const { error } = await supabase
         .from('egresos')
@@ -169,12 +161,12 @@ const Egresos = () => {
   };
 
   const limpiarFiltros = () => {
-    setFiltroFecha(getFechaActualLocal());
+    setFiltroFecha(obtenerFechaHoyLocal());
     setFiltroCategoria('Todos');
   };
 
   const egresosFiltrados = egresos.filter(item => {
-    const cumpleFecha = filtroFecha ? item.fecha?.startsWith(filtroFecha) : true;
+    const cumpleFecha = filtroFecha ? extraerFecha(item.fecha) === filtroFecha : true;
     const cumpleCat = filtroCategoria === 'Todos' ? true : item.categoria === filtroCategoria;
     return cumpleFecha && cumpleCat;
   });
