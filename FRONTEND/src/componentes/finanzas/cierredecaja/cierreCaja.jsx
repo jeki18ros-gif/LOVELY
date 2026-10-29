@@ -47,7 +47,7 @@ const CierreCaja = () => {
     const cargarDatos = async () => {
       setLoading(true);
       try {
-        // Obtener el rango completo del día seleccionado
+        // Obtener el rango completo del día seleccionado con la zona horaria correcta
         const rango = obtenerRangoDelDia(fechaSeleccionada);
 
         // Consultar pagos del día específico con filtro en la consulta SQL
@@ -173,15 +173,12 @@ const CierreCaja = () => {
     setValoresContados(prev => ({ ...prev, [metodo]: valor }));
   };
 
-  // GUARDAR / ACTUALIZAR CIERRE
   const handleCerrarCaja = async () => {
     try {
-      // Obtener hora actual en formato HH:MM:SS
       const ahora = new Date();
-      const horaLocal = ahora.toTimeString().split(' ')[0]; // Obtiene "HH:MM:SS"
+      const horaLocal = ahora.toTimeString().split(' ')[0];
       const fechaCierreLocal = `${fechaSeleccionada}T${horaLocal}`;
 
-      // Buscar cierre existente del día usando rango
       const rango = obtenerRangoDelDia(fechaSeleccionada);
       
       const { data: cierresData, error: errorCierres } = await supabase

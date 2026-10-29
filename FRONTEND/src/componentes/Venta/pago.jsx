@@ -45,7 +45,6 @@ const PaymentModule = ({
   }, [montoPago, totalConComisionGeneral]);
 
   const resumenMixto = useMemo(() => {
-    let abonoReal = 0, totalCobrado = 0, totalComisiones = 0;
     const detalle = pagosMixtos.map(pago => {
       const monto = Number(pago.monto || 0);
       let real = monto, comision = 0;
@@ -53,9 +52,12 @@ const PaymentModule = ({
         real = monto / 1.05;
         comision = monto - real;
       }
-      abonoReal += real; totalCobrado += monto; totalComisiones += comision;
       return { ...pago, abonoReal: real, comision };
     });
+
+    const abonoReal = detalle.reduce((acc, curr) => acc + curr.abonoReal, 0);
+    const totalCobrado = detalle.reduce((acc, curr) => acc + Number(curr.monto || 0), 0);
+    const totalComisiones = detalle.reduce((acc, curr) => acc + curr.comision, 0);
 
     const faltanteReal = total - abonoReal;
     const excedente = abonoReal > total ? abonoReal - total : 0;
@@ -98,7 +100,7 @@ const PaymentModule = ({
         ventaActiva.cliente ? ventaActiva.cliente.nombre : 'Cliente general';
 
       // 1. Guardar Cabecera de Venta
-      const { data: ventaData, error: ventaError } = await supabase
+      const { error: ventaError } = await supabase
         .from('ventas')
         .insert([
           {
@@ -108,9 +110,7 @@ const PaymentModule = ({
             cliente_id,
             nombre_cliente
           }
-        ])
-        .select()
-        .single();
+        ]);
 
       if (ventaError) throw ventaError;
 
@@ -149,14 +149,14 @@ const PaymentModule = ({
         });
       }
 
-      const detallesParaBD = detalles.map(({ nombre, ...resto }) => resto);
+      const detallesParaBD = detalles.map(({ nombre: _, ...resto }) => resto);
       const { error: detalleError } = await supabase
         .from('detalle_venta')
         .insert(detallesParaBD);
 
       if (detalleError) throw detalleError;
-if (ventaActiva.productos.length > 0) {
-        // Mapeamos solo el ID y la cantidad elegida para pasárselo a la BD
+
+      if (ventaActiva.productos.length > 0) {
         const productosParaStock = ventaActiva.productos.map(p => ({
           id: p.id,
           cantidad: p.cantidad
@@ -167,24 +167,28 @@ if (ventaActiva.productos.length > 0) {
 
         if (stockError) throw stockError;
       }
+
       // 3. Armar e Insertar Pagos
+      const fechaPago = obtenerFechaLocalISO();
       let pagos = [];
       if (metodo === 'mixto') {
         pagos = pagosMixtos.map(p => ({
           codigo_venta: codigoVenta,
           tipo: p.tipo,
           descripcion: 'mixto',
-          monto: Number(p.monto)
+          monto: Number(p.monto),
+          fecha: fechaPago
         }));
       } else {
-       pagos = [
-  {
-    codigo_venta: codigoVenta,
-    tipo: metodo,
-    descripcion: null,
-    monto: totalConComisionGeneral
-  }
-];
+        pagos = [
+          {
+            codigo_venta: codigoVenta,
+            tipo: metodo,
+            descripcion: null,
+            monto: totalConComisionGeneral,
+            fecha: fechaPago
+          }
+        ];
       }
 
       const { error: pagoError } = await supabase.from('pago').insert(pagos);
@@ -198,18 +202,20 @@ if (ventaActiva.productos.length > 0) {
       const comisionTotal = metodo === 'mixto' 
         ? resumenMixto.totalComisiones 
         : (metodo === 'tarjeta' ? (total * 0.05) : 0);
-const montoRecibido =
-  metodo === 'mixto'
-    ? resumenMixto.totalCobrado
-    : Number(montoPago);
 
-const vuelto =
-  metodo === 'mixto'
-    ? resumenMixto.excedente
-    : Math.max(
-        0,
-        Number(montoPago || 0) - totalConComisionGeneral
-      );
+      const montoRecibido =
+        metodo === 'mixto'
+          ? resumenMixto.totalCobrado
+          : Number(montoPago);
+
+      const vuelto =
+        metodo === 'mixto'
+          ? resumenMixto.excedente
+          : Math.max(
+              0,
+              Number(montoPago || 0) - totalConComisionGeneral
+            );
+
       const infoBoleta = {
         nombreCliente: nombre_cliente,
         fecha: new Date().toLocaleDateString('es-PE', {
@@ -231,7 +237,7 @@ const vuelto =
         comision: comisionTotal,
         totalFinal: metodo === 'mixto' ? (total + comisionTotal) : totalConComisionGeneral,
         montoRecibido,
-  vuelto
+        vuelto
       };
 
       const doc = <BoletaPDF data={infoBoleta} />;

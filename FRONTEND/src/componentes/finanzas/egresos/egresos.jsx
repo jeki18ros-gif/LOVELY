@@ -10,7 +10,7 @@ import {
   Edit2
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase'; 
-import { obtenerFechaHoyLocal, obtenerFechaLocalISO, extraerFecha } from '../../../utils/fechas';
+import { obtenerFechaHoyLocal, obtenerFechaLocalISO, obtenerRangoDelDia } from '../../../utils/fechas';
 
 const Egresos = () => {
   const theme = {
@@ -40,15 +40,24 @@ const Egresos = () => {
   const [editCat, setEditCat] = useState('Compra de Productos');
   const [editMetodo, setEditMetodo] = useState('Efectivo');
 
-  // Función independiente para recargas manuales (después de crear o actualizar)
+  // Función independiente para recargas manuales aplicando el rango de fecha local
   const fetchEgresos = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('egresos')
-        .select('*')
-        .order('fecha', { ascending: false });
+        .select('*');
 
+      if (filtroFecha) {
+        const rango = obtenerRangoDelDia(filtroFecha);
+        query = query
+          .gte('fecha', rango.inicio)
+          .lte('fecha', rango.fin);
+      }
+
+      query = query.order('fecha', { ascending: false });
+
+      const { data, error } = await query;
       if (error) throw error;
       setEgresos(data || []);
     } catch (error) {
@@ -58,18 +67,27 @@ const Egresos = () => {
     }
   };
 
-  // Carga inicial segura encapsulada dentro del efecto
+  // Carga reactiva filtrada por fecha utilizando el rango local exacto
   useEffect(() => {
     let isMounted = true;
 
-    const cargarEgresosInicial = async () => {
+    const cargarEgresosConFiltro = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('egresos')
-          .select('*')
-          .order('fecha', { ascending: false });
+          .select('*');
 
+        if (filtroFecha) {
+          const rango = obtenerRangoDelDia(filtroFecha);
+          query = query
+            .gte('fecha', rango.inicio)
+            .lte('fecha', rango.fin);
+        }
+
+        query = query.order('fecha', { ascending: false });
+
+        const { data, error } = await query;
         if (error) throw error;
 
         if (isMounted) {
@@ -84,12 +102,12 @@ const Egresos = () => {
       }
     };
 
-    cargarEgresosInicial();
+    cargarEgresosConFiltro();
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [filtroFecha]);
 
   // GUARDAR NUEVO EGRESO CON FECHA LOCAL CORREGIDA
   const handleSaveEgreso = async (e) => {
@@ -166,9 +184,8 @@ const Egresos = () => {
   };
 
   const egresosFiltrados = egresos.filter(item => {
-    const cumpleFecha = filtroFecha ? extraerFecha(item.fecha) === filtroFecha : true;
     const cumpleCat = filtroCategoria === 'Todos' ? true : item.categoria === filtroCategoria;
-    return cumpleFecha && cumpleCat;
+    return cumpleCat;
   });
 
   const totales = egresosFiltrados.reduce((acc, item) => {
@@ -223,7 +240,7 @@ const Egresos = () => {
               <card.icon className={theme.gold} size={20} />
             </div>
             <h2 className="text-2xl font-semibold tracking-tight">
-              <span className="notranslate" translate="no">- S/ {card.value.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              - <span className="notranslate" translate="no">S/ {card.value.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </h2>
           </div>
         ))}
@@ -311,7 +328,7 @@ const Egresos = () => {
                       {row.descripcion}
                     </td>
                     <td className="p-4 text-sm font-bold text-right text-rose-500 dark:text-rose-400">
-                      <span className="notranslate" translate="no">- S/ {Number.isNaN(Number(row.monto)) ? "0.00" : Number(row.monto).toFixed(2)}</span>
+                      - <span className="notranslate" translate="no">S/ {Number.isNaN(Number(row.monto)) ? "0.00" : Number(row.monto).toFixed(2)}</span>
                     </td>
                     <td className="p-4 text-sm font-light italic">{row.metodo_pago}</td>
                     

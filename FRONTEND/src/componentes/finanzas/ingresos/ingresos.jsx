@@ -47,7 +47,7 @@ const Ingresos = () => {
   const [editMetodo, setEditMetodo] = useState('Efectivo');
   const [esVenta, setEsVenta] = useState(false);
 
-  // Función independiente para recargas manuales
+  // Función independiente para recargas manuales aplicando el rango del día
   const fetchIngresos = async () => {
     setLoading(true);
     try {
@@ -88,7 +88,7 @@ const Ingresos = () => {
     }
   };
 
-  // Carga reactiva filtrada por fecha encapsulada en el efecto
+  // Carga reactiva filtrada por fecha utilizando el rango local exacto
   useEffect(() => {
     let isMounted = true;
 
