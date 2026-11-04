@@ -1,20 +1,29 @@
 export const calcularArqueo = (esperadoTotal, totalContado) => {
   const esperado = Number(esperadoTotal || 0);
   const contado = Number(totalContado || 0);
-  const esDeficitSinConteo = esperado < 0 && contado === 0;
-  const diferencia = esDeficitSinConteo
-    ? 0
-    : Number((contado - esperado).toFixed(2));
+
+  if (esperado < 0) {
+    const deficit = Math.abs(esperado);
+    return {
+      diferencia: deficit,
+      estado: 'Déficit / Pérdida',
+      deficitGlobal: deficit
+    };
+  }
+
+  const diferencia = Number(Math.abs(contado - esperado).toFixed(2));
 
   let estado = 'Cuadrado';
-  if (esDeficitSinConteo) estado = 'Déficit / Pérdida';
-  else if (diferencia < 0) estado = 'Faltante';
-  else if (diferencia > 0) estado = 'Sobrante';
+  if (contado < esperado) {
+    estado = 'Faltante';
+  } else if (contado > esperado) {
+    estado = 'Sobrante';
+  }
 
   return {
     diferencia,
     estado,
-    deficitGlobal: Math.max(0, -esperado)
+    deficitGlobal: Math.max(0, esperado - contado)
   };
 };
 
